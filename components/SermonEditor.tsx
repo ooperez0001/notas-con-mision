@@ -596,9 +596,12 @@ setVerseQuery(value);
               {p.version}
             </span>
           </div>
-         <p className="mt-1 text-[13px] text-green-800 italic whitespace-pre-line">
-  "{p.text}"
-</p>
+  <div className="mt-1 max-h-[260px] overflow-y-auto pr-2">
+  <p className="text-[13px] text-green-800 italic whitespace-pre-line">
+    "{p.text}"
+  </p>
+</div>
+
 
         </div>
 
