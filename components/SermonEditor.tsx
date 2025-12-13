@@ -247,11 +247,14 @@ const suggestions = Object.entries(result.versions)
   }, 350);
 };
 
-  const handleAddPassage = async (versionOverride?: string) => {
+ const handleAddPassage = async (refOverride?: string, versionOverride?: string): Promise<void> => {
 
-  const ref = newPassageRef.trim();
-  if (!ref) return;
+  const ref = (refOverride ?? newPassageRef).trim();
+if (!ref) return;
+
 const chosenVersion = versionOverride || selectedVersion || preferredVersion;
+
+
 
   try {
     setAddingPassage(true);
@@ -542,14 +545,28 @@ setVerseQuery(value);
         <span className="font-medium capitalize">{s.reference}</span>
 {s.verses && Array.isArray(s.verses) ? (
   <div className="mt-2 space-y-1 text-xs text-gray-700">
-    {s.verses.map((v: any, idx: number) => (
-      <div key={idx} className="leading-relaxed">
-        <span className="font-semibold mr-1">
-          {(v.number ?? v.verse ?? v.num) || idx + 1}.
-        </span>
-        <span>{v.text || v.verse || v.content || ""}</span>
-      </div>
-    ))}
+  {s.verses.map((v: any, idx: number) => {
+  const verseNumber = (v.number ?? v.verse ?? v.num) || idx + 1;
+  const verseRef = `${s.reference}:${verseNumber}`;
+  const verseText = v.text || v.verse || v.content || "";
+
+  return (
+    <div
+      key={idx}
+      className="leading-relaxed cursor-pointer hover:bg-blue-100 rounded px-1"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setVersionSuggestions([]);
+        handleAddPassage(verseRef);
+      }}
+    >
+      <span className="font-semibold mr-1">{verseNumber}.</span>
+      <span>{verseText}</span>
+    </div>
+  );
+})}
+
   </div>
 ) : (
   s.text && (
