@@ -1,0 +1,311 @@
+import { Language } from '../types';
+
+export const translations = {
+  es: {
+    // General
+    app_name: "Notas con Misión",
+    welcome: "Bienvenido a tu espacio de estudio.",
+    loading_ai: "Consultando a la IA...",
+    
+    // Bottom Nav
+    nav_home: "Inicio",
+    nav_sermons: "Sermones",
+    nav_bible: "Biblia",
+    nav_notes: "Notas",
+    nav_settings: "Ajustes",
+
+    // Dashboard
+    verse_of_day: "Versículo del Día",
+    last_sermon: "Último Sermón",
+    devotional_btn: "Mi Devocional con IA",
+    devotional_title: "✨ Devocional del Día",
+    premium_badge: "Premium",
+
+    // Sermons List
+    sermons_title: "Mis Sermones",
+    search_sermons: "Buscar en títulos, notas o predicador...",
+    new_sermon: "Nuevo Sermón",
+    untitled: "Sin Título",
+    no_preacher: "Sin predicador",
+    in_notes: "En tus notas:",
+    no_sermons_found: "No hay sermones que coincidan.",
+
+    // Sermon Editor
+    back: "Volver",
+    save: "Guardar",
+    delete: "Eliminar",
+    confirm_delete_title: "Confirmar Eliminación",
+    confirm_delete_msg: "¿Estás seguro de que deseas eliminar esto? Esta acción no se puede deshacer.",
+    cancel: "Cancelar",
+    sermon_title_ph: "Título del Sermón",
+    preacher_ph: "Predicador",
+    key_passages: "Pasajes Clave",
+    add_passage_ph: "Añadir pasaje (ej. Mateo 6:33)",
+    results_for: "Resultados para",
+    add: "Añadir",
+    copied: "Copiado!",
+    no_passages: "No hay pasajes añadidos aún.",
+    defined_terms: "Términos Definidos",
+    dictionary_btn: "Diccionario",
+    dictionary_placeholder: "Ej: Gracia, Expiación...",
+    summarize_btn: "Resumir con IA",
+    notes_placeholder: "Escribe tus notas aquí... No hay límite de espacio.",
+    
+    // Smart Bible
+    bible_title: "Biblia Inteligente",
+    bible_search_ph: "Busca pasaje (Juan 3:16) o palabra (amor)",
+    ai_analysis: "Análisis con IA",
+    analysis_exegesis: "📜 Exégesis y Contexto",
+    analysis_app: "🛠️ Aplicación Práctica",
+    analysis_related: "🔗 Versículos Relacionados",
+    analysis_prayer: "🙏 Sugerencia de Oración",
+    no_results: "No se encontraron resultados para",
+
+    // Personal Notes
+    notes_title: "Mis Notas",
+    search_notes: "Buscar en mis notas...",
+    note_title_ph: "Título de la nota",
+    note_content_ph: "Escribe tu nota personal aquí...",
+
+    // Settings
+    settings_title: "Configuración",
+    section_general: "General",
+    section_reading: "Lectura",
+    section_account: "Cuenta",
+    notifications: "Notificaciones Diarias",
+    preferred_version: "Versión Preferida",
+    dark_mode: "Modo Oscuro",
+    font_size: "Tamaño de Fuente",
+    language: "Idioma",
+    manage_sub: "Administrar Suscripción",
+    upgrade_premium: "Actualizar a Premium",
+    export_data: "Descargar Mis Datos",
+    clear_data: "Borrar Todos los Datos",
+    logout: "Cerrar Sesión",
+    premium_banner_title: "Hazte Premium",
+    premium_banner_desc: "Desbloquea IA ilimitada y más.",
+    view_plans: "Ver Planes",
+
+    // Premium Modal
+    premium_modal_title: "Notas con Misión PRO",
+    premium_modal_subtitle: "Desbloquea todo el poder de la IA",
+    feat_devotional: "Generación de Devocionales Ilimitada",
+    feat_exegesis: "Exégesis Profunda y Análisis Teológico",
+    feat_backup: "Copia de Seguridad en la Nube (Pronto)",
+    feat_ads: "Sin Anuncios y Soporte Prioritario",
+    plan_monthly: "MENSUAL",
+    plan_yearly: "ANUAL",
+    best_value: "AHORRA 33%",
+    per_month: "/ mes",
+    per_year: "/ año (Solo $1.33/mes)",
+    start_trial: "Comenzar Prueba Gratuita",
+    trial_text: "(7 días gratis)",
+    cancel_anytime: "La suscripción se renueva automáticamente. Cancela cuando quieras.",
+  },
+  en: {
+    // General
+    app_name: "Mission Notes",
+    welcome: "Welcome to your study space.",
+    loading_ai: "Consulting AI...",
+
+    // Bottom Nav
+    nav_home: "Home",
+    nav_sermons: "Sermons",
+    nav_bible: "Bible",
+    nav_notes: "Notes",
+    nav_settings: "Settings",
+
+    // Dashboard
+    verse_of_day: "Verse of the Day",
+    last_sermon: "Latest Sermon",
+    devotional_btn: "My AI Devotional",
+    devotional_title: "✨ Daily Devotional",
+    premium_badge: "Premium",
+
+    // Sermons List
+    sermons_title: "My Sermons",
+    search_sermons: "Search titles, notes, or preacher...",
+    new_sermon: "New Sermon",
+    untitled: "Untitled",
+    no_preacher: "No preacher",
+    in_notes: "In your notes:",
+    no_sermons_found: "No matching sermons found.",
+
+    // Sermon Editor
+    back: "Back",
+    save: "Save",
+    delete: "Delete",
+    confirm_delete_title: "Confirm Deletion",
+    confirm_delete_msg: "Are you sure you want to delete this? This action cannot be undone.",
+    cancel: "Cancel",
+    sermon_title_ph: "Sermon Title",
+    preacher_ph: "Preacher",
+    key_passages: "Key Passages",
+    add_passage_ph: "Add passage (e.g. Matthew 6:33)",
+    results_for: "Results for",
+    add: "Add",
+    copied: "Copied!",
+    no_passages: "No passages added yet.",
+    defined_terms: "Defined Terms",
+    dictionary_btn: "Dictionary",
+    dictionary_placeholder: "Ex: Grace, Atonement...",
+    summarize_btn: "Summarize with AI",
+    notes_placeholder: "Type your notes here... No space limit.",
+
+    // Smart Bible
+    bible_title: "Smart Bible",
+    bible_search_ph: "Search passage (John 3:16) or word (love)",
+    ai_analysis: "AI Analysis",
+    analysis_exegesis: "📜 Exegesis & Context",
+    analysis_app: "🛠️ Practical Application",
+    analysis_related: "🔗 Related Verses",
+    analysis_prayer: "🙏 Prayer Suggestion",
+    no_results: "No results found for",
+
+    // Personal Notes
+    notes_title: "My Notes",
+    search_notes: "Search my notes...",
+    note_title_ph: "Note Title",
+    note_content_ph: "Write your personal note here...",
+
+    // Settings
+    settings_title: "Settings",
+    section_general: "General",
+    section_reading: "Reading",
+    section_account: "Account",
+    notifications: "Daily Notifications",
+    preferred_version: "Preferred Version",
+    dark_mode: "Dark Mode",
+    font_size: "Font Size",
+    language: "Language",
+    manage_sub: "Manage Subscription",
+    upgrade_premium: "Upgrade to Premium",
+    export_data: "Download My Data",
+    clear_data: "Clear All Data",
+    logout: "Log Out",
+    premium_banner_title: "Go Premium",
+    premium_banner_desc: "Unlock unlimited AI and more.",
+    view_plans: "View Plans",
+
+    // Premium Modal
+    premium_modal_title: "Mission Notes PRO",
+    premium_modal_subtitle: "Unlock the full power of AI",
+    feat_devotional: "Unlimited Devotional Generation",
+    feat_exegesis: "Deep Exegesis & Theological Analysis",
+    feat_backup: "Cloud Backup (Coming Soon)",
+    feat_ads: "Ad-free & Priority Support",
+    plan_monthly: "MONTHLY",
+    plan_yearly: "YEARLY",
+    best_value: "SAVE 33%",
+    per_month: "/ month",
+    per_year: "/ year (Only $1.33/mo)",
+    start_trial: "Start Free Trial",
+    trial_text: "(7 days free)",
+    cancel_anytime: "Subscription renews automatically. Cancel anytime.",
+  },
+  pt: {
+    // General
+    app_name: "Notas com Missão",
+    welcome: "Bem-vindo ao seu espaço de estudo.",
+    loading_ai: "Consultando a IA...",
+
+    // Bottom Nav
+    nav_home: "Início",
+    nav_sermons: "Sermões",
+    nav_bible: "Bíblia",
+    nav_notes: "Notas",
+    nav_settings: "Configurações",
+
+    // Dashboard
+    verse_of_day: "Versículo do Dia",
+    last_sermon: "Último Sermão",
+    devotional_btn: "Meu Devocional com IA",
+    devotional_title: "✨ Devocional Diário",
+    premium_badge: "Premium",
+
+    // Sermons List
+    sermons_title: "Meus Sermões",
+    search_sermons: "Buscar em títulos, notas ou pregador...",
+    new_sermon: "Novo Sermão",
+    untitled: "Sem Título",
+    no_preacher: "Sem pregador",
+    in_notes: "Nas suas notas:",
+    no_sermons_found: "Nenhum sermão encontrado.",
+
+    // Sermon Editor
+    back: "Voltar",
+    save: "Salvar",
+    delete: "Excluir",
+    confirm_delete_title: "Confirmar Exclusão",
+    confirm_delete_msg: "Tem certeza que deseja excluir? Esta ação não pode ser desfeita.",
+    cancel: "Cancelar",
+    sermon_title_ph: "Título do Sermão",
+    preacher_ph: "Pregador",
+    key_passages: "Passagens Chave",
+    add_passage_ph: "Adicionar passagem (ex. Mateus 6:33)",
+    results_for: "Resultados para",
+    add: "Adicionar",
+    copied: "Copiado!",
+    no_passages: "Nenhuma passagem adicionada ainda.",
+    defined_terms: "Termos Definidos",
+    dictionary_btn: "Dicionário",
+    dictionary_placeholder: "Ex: Graça, Expiação...",
+    summarize_btn: "Resumir com IA",
+    notes_placeholder: "Escreva suas notas aqui... Sem limite de espaço.",
+
+    // Smart Bible
+    bible_title: "Bíblia Inteligente",
+    bible_search_ph: "Buscar passagem (João 3:16) ou palavra (amor)",
+    ai_analysis: "Análise com IA",
+    analysis_exegesis: "📜 Exegese e Contexto",
+    analysis_app: "🛠️ Aplicação Prática",
+    analysis_related: "🔗 Versículos Relacionados",
+    analysis_prayer: "🙏 Sugestão de Oração",
+    no_results: "Nenhum resultado encontrado para",
+
+    // Personal Notes
+    notes_title: "Minhas Notas",
+    search_notes: "Buscar minhas notas...",
+    note_title_ph: "Título da Nota",
+    note_content_ph: "Escreva sua nota pessoal aqui...",
+
+    // Settings
+    settings_title: "Configurações",
+    section_general: "Geral",
+    section_reading: "Leitura",
+    section_account: "Conta",
+    notifications: "Notificações Diárias",
+    preferred_version: "Versão Preferida",
+    dark_mode: "Modo Escuro",
+    font_size: "Tamanho da Fonte",
+    language: "Idioma",
+    manage_sub: "Gerenciar Assinatura",
+    upgrade_premium: "Mudar para Premium",
+    export_data: "Baixar Meus Dados",
+    clear_data: "Limpar Todos os Dados",
+    logout: "Sair",
+    premium_banner_title: "Seja Premium",
+    premium_banner_desc: "Desbloqueie IA ilimitada e mais.",
+    view_plans: "Ver Planos",
+
+    // Premium Modal
+    premium_modal_title: "Notas com Missão PRO",
+    premium_modal_subtitle: "Desbloqueie todo o poder da IA",
+    feat_devotional: "Geração Ilimitada de Devocionais",
+    feat_exegesis: "Exegese Profunda e Análise Teológica",
+    feat_backup: "Backup na Nuvem (Em breve)",
+    feat_ads: "Sem Anúncios e Suporte Prioritário",
+    plan_monthly: "MENSAL",
+    plan_yearly: "ANUAL",
+    best_value: "ECONOMIZE 33%",
+    per_month: "/ mês",
+    per_year: "/ ano (Apenas $1.33/mês)",
+    start_trial: "Começar Teste Grátis",
+    trial_text: "(7 dias grátis)",
+    cancel_anytime: "A assinatura é renovada automaticamente. Cancele quando quiser.",
+  }
+};
+
+export const getTranslation = (lang: Language, key: keyof typeof translations['es']) => {
+  return translations[lang][key] || translations['es'][key];
+};
