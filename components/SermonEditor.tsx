@@ -549,12 +549,36 @@ setVerseQuery(value);
       checked={keepOpen}
       onChange={(e) => setKeepOpen(e.target.checked)}
     />
-    Mantener lista abierta
+
+    <span>Mantener lista abierta</span>
+
+    {keepOpen && (
+      <span className="ml-2 rounded-full px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700">
+        Modo múltiple activo
+      </span>
+    )}
   </label>
+
+  <div className="mt-1 text-xs text-gray-500">
+    {keepOpen
+      ? "Tip: haz click en varios versículos sin cerrar la lista."
+      : "Tip: desactívalo si solo quieres añadir un versículo y cerrar la lista."}
+  </div>
 </div>
 
+
 {versionSuggestions.length > 0 && (
-  <div className="mt-2 rounded-xl border border-red-500 bg-white shadow-sm max-h-[320px] overflow-y-auto">
+  <div
+    className={`mt-2 rounded-xl bg-white shadow-sm max-h-[320px] overflow-y-auto border ${
+      keepOpen ? "border-blue-500 ring-1 ring-blue-200" : "border-gray-200"
+    }`}
+  >
+{keepOpen && (
+  <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-3 py-2 text-xs text-gray-600">
+    Lista abierta: selecciona varios versículos 👇
+  </div>
+)}
+
 
 
     {versionSuggestions.map((s) => (
