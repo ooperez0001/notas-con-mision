@@ -500,15 +500,6 @@ onChange={(e) => {
 // Siempre actualiza verseQuery cuando el usuario escribe (capítulo o versículo)
 setVerseQuery(value);
 
-<label className="flex items-center gap-2 text-sm text-gray-600 select-none">
-  <input
-    type="checkbox"
-    checked={keepOpen}
-    onChange={(e) => setKeepOpen(e.target.checked)}
-  />
-  Mantener lista abierta
-</label>
-
 
 }}
 
