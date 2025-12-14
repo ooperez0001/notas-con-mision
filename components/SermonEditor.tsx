@@ -53,11 +53,13 @@ const [searchResults, setSearchResults] = useState<KeyPassageOption[]>([]);
 const [versionSuggestions, setVersionSuggestions] = useState<KeyPassage[]>([]);
 const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
 const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
+const [keepOpen, setKeepOpen] = useState(false);
 const VERSIONS_BY_LANG: Record<string, string[]> = {
   es: ["rvr1960", "nvi", "ntv", "dhh", "lbla"],
   en: ["kjv", "niv"],
   pt: ["arc"],
 };
+
 
   useEffect(() => {
   if (!verseQuery) {
@@ -143,7 +145,8 @@ setVersionSuggestions(suggestions as any);
     }));
     
     // Reset search
-    setVerseQuery('');
+    if (!keepOpen) setVerseQuery('');
+
     setVerseResults(null);
   };
   
@@ -207,7 +210,8 @@ setVersionSuggestions(suggestions as any);
       const result = await fetchVerseFromAPI(value);
 
       if (!result?.versions) {
-        setVersionSuggestions([]);
+        if (!keepOpen) setVersionSuggestions([]);
+
         return;
       }
 
@@ -253,8 +257,6 @@ const suggestions = Object.entries(result.versions)
 if (!ref) return;
 
 const chosenVersion = versionOverride || selectedVersion || preferredVersion;
-
-
 
   try {
     setAddingPassage(true);
@@ -308,20 +310,27 @@ const newPassage: KeyPassage = {
 
     // 6) Guardarlo en el estado de pasajes
     setKeyPassages((prev) => [...prev, newPassage]);
-    setNewPassageRef('');
+   if (!keepOpen) setNewPassageRef('');
+
   } catch (error) {
     console.error('Error al buscar pasaje:', error);
     setPassageError('Ocurrió un error al buscar el pasaje.');
   } finally {
-    setAddingPassage(false);
+  setAddingPassage(false);
 
-    // ✅ limpiar UI después de añadir
-setNewPassageRef("");
-setVerseQuery("");
-setVerseResults(null);
-setVersionSuggestions([]);
+  console.log("keepOpen =", keepOpen);
 
+  if (!keepOpen) {
+    setNewPassageRef('');
+    setVerseQuery('');
+    setVerseResults(null);
+    setVersionSuggestions([]);
+  } else {
+    setPassageError(null);
   }
+}
+
+
 };
 
 
@@ -463,8 +472,9 @@ const handleClearNotes = () => {
   </label>
 
   {/* Barra de búsqueda de pasaje */}
-  <div className="flex gap-2">
+  <div className="flex items-center gap-2">
     <input
+    
       type="text"
       value={newPassageRef}
 onChange={(e) => {
@@ -490,6 +500,15 @@ onChange={(e) => {
 // Siempre actualiza verseQuery cuando el usuario escribe (capítulo o versículo)
 setVerseQuery(value);
 
+<label className="flex items-center gap-2 text-sm text-gray-600 select-none">
+  <input
+    type="checkbox"
+    checked={keepOpen}
+    onChange={(e) => setKeepOpen(e.target.checked)}
+  />
+  Mantener lista abierta
+</label>
+
 
 }}
 
@@ -502,7 +521,7 @@ setVerseQuery(value);
   }
 }}
       placeholder="Ej. Juan 3:16, Mateo 6:33..."
-      className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      className="flex-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
     />
     {isSearchingSuggestions && (
   <div className="mt-2 text-sm text-gray-500">
@@ -513,7 +532,7 @@ setVerseQuery(value);
       type="button"
       onClick={handleAddPassage}
       disabled={addingPassage || !newPassageRef.trim()}
-      className={`px-4 py-2 rounded-xl text-sm font-semibold text-white ${
+      className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold text-white ${
         addingPassage || !newPassageRef.trim()
           ? 'bg-gray-300 cursor-not-allowed'
           : 'bg-blue-600 hover:bg-blue-700'
@@ -522,6 +541,17 @@ setVerseQuery(value);
       {addingPassage ? 'Buscando...' : 'Añadir'}
     </button>
   </div>
+
+  <div className="mt-2">
+  <label className="flex items-center gap-2 text-sm text-gray-600 select-none">
+    <input
+      type="checkbox"
+      checked={keepOpen}
+      onChange={(e) => setKeepOpen(e.target.checked)}
+    />
+    Mantener lista abierta
+  </label>
+</div>
 
 {versionSuggestions.length > 0 && (
   <div className="mt-2 rounded-xl border border-red-500 bg-white shadow-sm max-h-[320px] overflow-y-auto">
@@ -547,7 +577,6 @@ setVerseQuery(value);
   <div className="mt-2 space-y-1 text-xs text-gray-700">
   {s.verses.map((v: any, idx: number) => {
   const verseNumber = (v.number ?? v.verse ?? v.num) || idx + 1;
-  const verseRef = `${s.reference}:${verseNumber}`;
   const verseText = v.text || v.verse || v.content || "";
 
   return (
@@ -557,7 +586,22 @@ setVerseQuery(value);
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        setVersionSuggestions([]);
+
+        // 1) baseRef sin ":" final
+        const baseRef = (s.reference || "").replace(/:$/, "");
+        // 2) referencia final del verso (Mateo 6:5)
+        const verseRef = `${baseRef}:${verseNumber}`;
+
+        // 3) si keepOpen está activo, dejamos el input listo en "Mateo 6:"
+        if (keepOpen) {
+          setNewPassageRef(`${baseRef}:`);
+          setVerseQuery(`${baseRef}:`);
+        }
+
+        // 4) solo cerramos la lista si NO está keepOpen
+        if (!keepOpen) setVersionSuggestions([]);
+
+        // 5) agrega el versículo
         handleAddPassage(verseRef);
       }}
     >
