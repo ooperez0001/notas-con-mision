@@ -61,65 +61,11 @@ const VERSIONS_BY_LANG: Record<string, string[]> = {
 };
 
 
-  useEffect(() => {
-  if (!verseQuery) {
+ useEffect(() => {
+  if (!verseQuery.trim()) {
     setVersionSuggestions([]);
-    return;
   }
-setVersionSuggestions([]);
-setIsVerseLoading(true);
-
-  const handler = setTimeout(() => {
-    setIsVerseLoading(true);
-
-    fetchVerseFromAPI(verseQuery, preferredVersion)
-      .then((results) => {
-        if (!results?.versions) {
-          setVersionSuggestions([]);
-          return;
-        }
-
-        const ref = (results.ref || verseQuery).trim();
-       const allVersions = Object.keys(results.versions || {});
-
-// armamos una sugerencia por versión, PERO ahora incluyendo verses y text
-const suggestions = allVersions.map((v) => {
-  const versesRaw = (results.versions?.[v] || []) as any[];
-
-  const fullText = versesRaw
-    .map((x) => {
-      const num = x.number ?? x.verse ?? x.num ?? "";
-      const txt = x.text ?? x.content ?? x.verseText ?? "";
-      return `${num ? num + ". " : ""}${String(txt).trim()}`;
-    })
-    .filter(Boolean)
-    .join("\n");
-
-
-  return {
-    id: `${(results.ref || verseQuery.trim())}-${v}`,
-    reference: results.ref || verseQuery.trim(),
-    version: v,
-    text: fullText,     // para vista previa
-    verses: versesRaw,  // ✅ esto es lo que hará que se vean separados
-    isJesusWords: false,
-  };
-});
-
-suggestions.sort((a, b) =>
-  a.version === preferredVersion ? -1 : b.version === preferredVersion ? 1 : 0
-);
-
-setVersionSuggestions(suggestions as any);
-
-      })
-      .finally(() => {
-        setIsVerseLoading(false);
-      });
-  }, 800);
-
-  return () => clearTimeout(handler);
-}, [verseQuery, preferredVersion]);
+}, [verseQuery]);
 
   
   // Seguridad al inicializar verses en caso de datos antiguos corruptos
@@ -207,43 +153,164 @@ setVersionSuggestions(suggestions as any);
     try {
       setIsSearchingSuggestions(true);
 
-      const result = await fetchVerseFromAPI(value);
+ const result = await fetchVerseFromAPI(value);
 
-      if (!result?.versions) {
-        if (!keepOpen) setVersionSuggestions([]);
 
-        return;
-      }
+  console.log("[SUGGEST]", value, "keys:", Object.keys(result || {}), result);
+console.log("[SUGGEST] has versions?", !!(result as any)?.versions, "has verses?", Array.isArray((result as any)?.verses));
+console.log("[SUGGEST] version keys:", Object.keys((result as any).versions || {}));
 
-      const allowedVersions = VERSIONS_BY_LANG[language] ?? [];
 
-const suggestions = Object.entries(result.versions)
-  .filter(([versionKey]) =>
-    allowedVersions.length === 0 || allowedVersions.includes(versionKey)
-  )
-  .map(([versionKey, verses]) => {
-    if (!verses || verses.length === 0) return null;
+// ✅ Normalizamos formatos: puede venir como {versions:{...}} o como {verses:[...]}
+const ref = (result?.ref || value).trim();
 
-    const fullText = verses
-      .map((v: any) => {
-        const num = v.number ?? v.verse ?? "";
-        const txt = v.text ?? v.content ?? "";
-        return `${num ? num + ". " : ""}${txt}`;
-      })
-      .join("\n"); // 👈 versículos separados
+// intenta tomar "versions" si existe
+// intenta tomar "versions" venga donde venga (result.versions, result.data.versions, etc.)
+const rawVersions =
+  (result as any)?.versions ??
+  (result as any)?.data?.versions ??
+  (result as any)?.data?.results?.versions ??
+  (result as any)?.results?.versions ??
+  null;
 
-    return {
-      id: `${result.ref}-${versionKey}`,
-      reference: result.ref,
-      version: versionKey,
-      text: fullText,
-    };
+const versionsFromApi =
+  rawVersions && typeof rawVersions === "object" && !Array.isArray(rawVersions)
+    ? rawVersions
+    : null;
+
+
+// si NO viene versions, intenta tomar un array de versos directo
+const versesArray =
+  Array.isArray((result as any)?.verses)
+    ? (result as any).verses
+    : Array.isArray((result as any)?.data?.verses)
+    ? (result as any).data.verses
+    : null;
+
+// construimos un objeto versions sí o sí
+const versionsObj =
+  versionsFromApi ??
+  (versesArray
+    ? { [preferredVersion || "rvr1960"]: versesArray } : null);
+
+if (!versionsObj) {
+  setVersionSuggestions([]);
+  return;
+}
+console.log("[SUGGEST] versionsObj keys:", Object.keys(versionsObj));
+console.log("[SUGGEST] versionsObj sample (NVI):", (versionsObj as any)["NVI"]);
+
+// ✅ usamos versionsObj (no result.versions) para asegurar que vienen todas las versiones
+const allowedVersions = VERSIONS_BY_LANG[language] ?? []; // ej: ["rvr1960","nvi","ntv","dhh","lbla"]
+
+const normalizeVersion = (v: string) => {
+  const up = String(v).toUpperCase();
+  // la API a veces devuelve RVR60 en lugar de RVR1960
+  if (up === "RVR60") return "RVR1960";
+  return up;
+};
+
+const allowedNormalized = allowedVersions.map(normalizeVersion);
+
+// IMPORTANTE: usar versionsObj (no result.versions)
+const suggestions = Object.entries(versionsObj)
+  .filter(([versionKey]) => {
+    const vk = normalizeVersion(String(versionKey));
+    return allowedNormalized.length === 0 || allowedNormalized.includes(vk);
   })
-  .filter(Boolean) as KeyPassage[];
+ .map(([versionKey, verses]) => {
+  // soporta: array directo, {verses:[]}, {data:{verses:[]}}
+const pickVersesArray = (v: any) => {
+  // 1) Si ya es array, perfecto
+  if (Array.isArray(v)) return v;
 
+  // 2) Probar rutas comunes a arrays
+  const candidates = [
+    v?.verses,
+    v?.data?.verses,
+    v?.chapter?.verses,
+    v?.data?.chapter?.verses,
+    v?.results?.verses,
+    v?.data?.results?.verses,
+    v?.chapter,
+    v?.data?.chapter,
+  ];
+
+  for (const c of candidates) {
+    if (Array.isArray(c)) return c;
+  }
+
+  // 3) Si viene como objeto { "1": "texto", "2": "texto" ... } lo convertimos a array
+  const objCandidates = [
+    v?.verses,
+    v?.data?.verses,
+    v?.chapter?.verses,
+    v?.data?.chapter?.verses,
+    v, // a veces el root ya es el mapa
+  ];
+
+  for (const o of objCandidates) {
+    if (o && typeof o === "object" && !Array.isArray(o)) {
+      const keys = Object.keys(o).filter((k) => /^\d+$/.test(k));
+      if (keys.length) {
+        return keys
+          .sort((a, b) => Number(a) - Number(b))
+          .map((k) => ({ v: Number(k), text: o[k] }));
+      }
+    }
+  }
+
+  return [];
+};
+
+const arr = pickVersesArray(verses);
+
+
+
+  // Si la API no trajo texto para esa versión, igual la mostramos como opción
+if (arr.length === 0) {
+  return {
+    id: `${ref}-${versionKey}`,
+    reference: ref,
+    version: String(versionKey),
+    text: "",
+    verses: [],
+    isJesusWords: false,
+  };
+}
+
+
+  const fullText = arr
+    .map((v: any) => {
+      const num = v.number ?? v.verse ?? v.num ?? "";
+      const txt = v.text ?? v.content ?? v.verseText ?? "";
+      return `${num ? num + ". " : ""}${String(txt).trim()}`;
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  return {
+    id: `${ref}-${versionKey}`,
+    reference: ref,
+    version: String(versionKey),
+    text: fullText,
+    verses: arr,
+    isJesusWords: false,
+  };
+})
+
+  .filter(Boolean) as any[];
+
+// poner la preferida arriba
+suggestions.sort((a, b) =>
+  a.version === preferredVersion ? -1 : b.version === preferredVersion ? 1 : 0
+);
+  
+console.log("[SUGGEST] suggestions length:", suggestions.length);
 
       setVersionSuggestions(suggestions);
     } catch (e) {
+      console.error("[SUGGEST] scheduleSuggestionsSearch error:", e);
       setVersionSuggestions([]);
     } finally {
       setIsSearchingSuggestions(false);
