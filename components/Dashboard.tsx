@@ -4,7 +4,8 @@ import { Modal } from './Modal';
 import { Sermon, TabId, UserProfile, Language } from '../types';
 import { generateDevotional } from '../services/geminiService';
 import { getVerseOfTheDay, getVersionsByLanguage } from '../services/bibleService';
-import { translations } from '../services/translations';
+import { translations, getTranslation } from "../services/translations";
+
 
 interface DashboardProps {
   setActiveTab: (tab: TabId) => void;
@@ -21,7 +22,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, latestSermon
   const [modalContent, setModalContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [verseOfTheDayData] = useState(getVerseOfTheDay());
-  const t = translations[language];
+const t = (key: keyof typeof translations["es"]) => getTranslation(language, key);
+
 
   // Get filtered versions based on current language
   const availableVersions = getVersionsByLanguage(language);
@@ -47,24 +49,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, latestSermon
     setIsLoading(false);
   };
 
-  return (
-    <>
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={t.devotional_title}>
-        {isLoading ? (
-          <div className="text-center p-8 flex flex-col items-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mb-4"></div>
-            <p className="text-gray-500 dark:text-gray-400">{t.loading_ai}</p>
-          </div>
-        ) : (
-          <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{modalContent}</p>
-        )}
-      </Modal>
+ return (
+  <>
+    <Modal
+      isOpen={isModalOpen}
+      onClose={() => setIsModalOpen(false)}
+      title={t("devotional_title")}
+    >
+      {isLoading ? (
+        <div className="text-center p-8 flex flex-col items-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mb-4"></div>
+          <p className="text-gray-500 dark:text-gray-400">{t("loading_ai")}</p>
+        </div>
+      ) : (
+        <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+          {modalContent}
+        </p>
+      )}
+    </Modal>
 
       <div className="p-6 space-y-8 animate-fade-in max-w-lg mx-auto">
         <header className="mt-4 flex justify-between items-start">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800 dark:text-white tracking-tight">{t.app_name}</h1>
-              <p className="text-gray-500 dark:text-gray-400 font-medium">{t.welcome}</p>
+              <h1 className="text-3xl font-bold text-gray-800 dark:text-white tracking-tight">{t("app_name")}</h1>
+              <p className="text-gray-500 dark:text-gray-400 font-medium">{t("welcome")}</p>
             </div>
             {!user.isPremium && (
                 <button 
@@ -83,18 +91,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, latestSermon
   >
     {/* Encabezado */}
     <h2 className="font-bold text-sm text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
-      {t.last_sermon}
+      {t("last_sermon")}
     </h2>
 
     {/* Título del sermón */}
     <p className="text-xl font-bold text-gray-800 dark:text-white transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400">
-      {latestSermon.title || 'Sin título'}
+     {latestSermon.title || t("untitled_sermon")}
+
     </p>
 
     {/* Predicador */}
     <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mt-2">
       <span className="transition-colors group-hover:text-blue-500 dark:group-hover:text-blue-300">
-        {latestSermon.preacher || 'Sin predicador'}
+        {latestSermon.preacher || t("no_preacher")}
       </span>
     </div>
 
@@ -111,7 +120,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, latestSermon
 
         <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="font-bold text-lg text-gray-700 dark:text-gray-200">{t.verse_of_day}</h2>
+            <h2 className="font-bold text-lg text-gray-700 dark:text-gray-200">{t("verse_of_day")}</h2>
             <select 
               value={displayVersion} 
               onChange={(e) => setPreferredVersion(e.target.value)} 
@@ -135,8 +144,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, latestSermon
           className={`w-full flex items-center justify-center gap-3 font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all ${user.isPremium ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white' : 'bg-gray-900 dark:bg-gray-700 text-white'}`}
         >
           {user.isPremium ? <Sparkles size={20} className="text-yellow-300" /> : <Crown size={20} className="text-yellow-500" />}
-          <span>{t.devotional_btn} {user.isPremium ? '' : `(${t.premium_badge})`}</span>
-        </button>
+        <span>
+    {t("devotional_btn")}
+    {!user.isPremium ? ` (${t("premium_badge")})` : ""}
+  </span>
+</button>
       </div>
     </>
   );

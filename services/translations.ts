@@ -20,6 +20,7 @@ export const translations = {
     devotional_btn: "Mi Devocional con IA",
     devotional_title: "✨ Devocional del Día",
     premium_badge: "Premium",
+    untitled_sermon: "Sin título",
 
     // Sermons List
     sermons_title: "Mis Sermones",
@@ -29,6 +30,7 @@ export const translations = {
     no_preacher: "Sin predicador",
     in_notes: "En tus notas:",
     no_sermons_found: "No hay sermones que coincidan.",
+   
 
     // Sermon Editor
     back: "Volver",
@@ -48,8 +50,20 @@ export const translations = {
     defined_terms: "Términos Definidos",
     dictionary_btn: "Diccionario",
     dictionary_placeholder: "Ej: Gracia, Expiación...",
-    summarize_btn: "Resumir con IA",
+    summarize_btn: "Resumir con IA",   
     notes_placeholder: "Escribe tus notas aquí... No hay límite de espacio.",
+   
+    keep_list_open: "Mantener lista abierta",
+searching: "Buscando...",
+multi_mode_active: "Modo múltiple activo",
+tip_keep_open_on: "Tip: haz clic en varios versículos sin cerrar la lista.",
+tip_keep_open_off: "Tip: desactívalo si solo quieres añadir un versículo y cerrar la lista.",
+open_list_multiple: "Lista abierta: selecciona varios versículos 👇",
+words: "palabras",
+characters: "caracteres",
+clear_notes: "Limpiar notas",
+
+
     
     // Smart Bible
     bible_title: "Biblia Inteligente",
@@ -121,6 +135,7 @@ export const translations = {
     devotional_btn: "My AI Devotional",
     devotional_title: "✨ Daily Devotional",
     premium_badge: "Premium",
+    untitled_sermon: "Untitled",
 
     // Sermons List
     sermons_title: "My Sermons",
@@ -130,6 +145,7 @@ export const translations = {
     no_preacher: "No preacher",
     in_notes: "In your notes:",
     no_sermons_found: "No matching sermons found.",
+    
 
     // Sermon Editor
     back: "Back",
@@ -151,6 +167,14 @@ export const translations = {
     dictionary_placeholder: "Ex: Grace, Atonement...",
     summarize_btn: "Summarize with AI",
     notes_placeholder: "Type your notes here... No space limit.",
+    keep_list_open: "Keep list open",
+searching: "Searching...",
+multi_mode_active: "Multi-select mode",
+tip_keep_open_on: "Tip: click multiple verses without closing the list.",
+tip_keep_open_off: "Tip: turn this off if you only want one verse and close the list.",
+words: "words",
+characters: "characters",
+clear_notes: "Clear notes",
 
     // Smart Bible
     bible_title: "Smart Bible",
@@ -222,6 +246,7 @@ export const translations = {
     devotional_btn: "Meu Devocional com IA",
     devotional_title: "✨ Devocional Diário",
     premium_badge: "Premium",
+    untitled_sermon: "Sem título",
 
     // Sermons List
     sermons_title: "Meus Sermões",
@@ -231,6 +256,7 @@ export const translations = {
     no_preacher: "Sem pregador",
     in_notes: "Nas suas notas:",
     no_sermons_found: "Nenhum sermão encontrado.",
+
 
     // Sermon Editor
     back: "Voltar",
@@ -252,6 +278,17 @@ export const translations = {
     dictionary_placeholder: "Ex: Graça, Expiação...",
     summarize_btn: "Resumir com IA",
     notes_placeholder: "Escreva suas notas aqui... Sem limite de espaço.",
+    keep_list_open: "Manter lista aberta",
+searching: "Buscando...",
+multi_mode_active: "Modo de múltipla seleção",
+tip_keep_open_on: "Dica: clique em vários versículos sem fechar a lista.",
+tip_keep_open_off: "Dica: desative se quiser apenas um versículo e fechar a lista.",
+words: "palavras",
+characters: "caracteres",
+clear_notes: "Limpar notas",
+
+
+
 
     // Smart Bible
     bible_title: "Bíblia Inteligente",

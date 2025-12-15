@@ -4,7 +4,8 @@ import { Modal } from './Modal';
 import { BibleDictionary } from './BibleDictionary';
 import { fetchVerseFromAPI, searchByKeyword, getVersionsByLanguage } from '../services/bibleService';
 import { summarizeSermon } from '../services/geminiService';
-import { translations } from '../services/translations';
+import { translations, getTranslation } from "../services/translations";
+
 
 
 interface SermonEditorProps {
@@ -44,7 +45,9 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({ sermon, setSelectedS
   const [isSummarizing, setIsSummarizing] = useState(false);
   const notesRef = useRef<HTMLTextAreaElement>(null);
   const suggestionsTimerRef = useRef<number | null>(null);
-  const t = translations[language];
+ const t = (key: keyof typeof translations["es"]) => getTranslation(language, key);
+
+
 const [keyPassages, setKeyPassages] = useState<KeyPassage[]>([]);
 const [newPassageRef, setNewPassageRef] = useState('');
 const [addingPassage, setAddingPassage] = useState(false);
@@ -56,6 +59,7 @@ const [availableVersionKeys, setAvailableVersionKeys] = useState<string[]>([]);
 const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
 const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
 const [keepOpen, setKeepOpen] = useState(false);
+
 const VERSIONS_BY_LANG: Record<string, string[]> = {
   es: ["rvr1960", "nvi", "ntv", "dhh", "lbla"],
   en: ["kjv", "niv"],
@@ -590,18 +594,20 @@ const handleClearNotes = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 transition-colors duration-200">
       <div className="p-6 max-w-3xl mx-auto space-y-4">
         {/* Encabezado básico */}
-        <h1 className="text-2xl font-bold mb-2">
-          {editedSermon.title || 'Nuevo sermón'}
-        </h1>
+       <h1 className="text-2xl font-bold mb-2">
+  {editedSermon.title || t('new_sermon')}
+</h1>
 
-        <p className="text-sm text-gray-500">
-          Predicador: {editedSermon.preacher || '—'}
-        </p>
+<p className="text-sm text-gray-500">
+  {t('preacher_ph')}: {editedSermon.preacher || "—"}
+</p>
+
 {/* PASAJES CLAVE */}
 <div className="mb-6">
-  <label className="block text-sm font-medium text-gray-600 mb-2">
-    Pasajes clave
-  </label>
+ <label className="block text-sm font-medium text-gray-600 mb-2">
+ {t('key_passages')}
+</label>
+
 
   {/* Barra de búsqueda de pasaje */}
   <div className="flex items-center gap-2">
@@ -643,7 +649,8 @@ setVerseQuery(value);
     }
   }
 }}
-      placeholder="Ej. Juan 3:16, Mateo 6:33..."
+      placeholder={t('add_passage_ph')}
+
       className="flex-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
     />
     {isSearchingSuggestions && (
@@ -661,7 +668,8 @@ setVerseQuery(value);
           : 'bg-blue-600 hover:bg-blue-700'
       }`}
     >
-      {addingPassage ? 'Buscando...' : 'Añadir'}
+      {addingPassage ? t('searching') : t('add')}
+
     </button>
   </div>
 
@@ -673,19 +681,19 @@ setVerseQuery(value);
       onChange={(e) => setKeepOpen(e.target.checked)}
     />
 
-    <span>Mantener lista abierta</span>
+    {t('keep_list_open')}
+
 
     {keepOpen && (
       <span className="ml-2 rounded-full px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700">
-        Modo múltiple activo
+        {t("multi_mode_active")}
       </span>
     )}
   </label>
 
   <div className="mt-1 text-xs text-gray-500">
     {keepOpen
-      ? "Tip: haz click en varios versículos sin cerrar la lista."
-      : "Tip: desactívalo si solo quieres añadir un versículo y cerrar la lista."}
+      ? t("tip_keep_open_on") : t("tip_keep_open_off")}
   </div>
 </div>
 
@@ -697,7 +705,7 @@ setVerseQuery(value);
   >
     {keepOpen && (
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-3 py-2 text-xs text-gray-600">
-        Lista abierta: selecciona varios versículos 👇
+        {t("open_list_multiple")}👇
       </div>
     )}
 
@@ -834,7 +842,7 @@ setVerseQuery(value);
         {/* Editor de notas sencillo */}
         <div className="mt-4">
           <label className="block text-sm font-semibold mb-1">
-            Notas del sermón
+            {t("notes_title")}
           </label>
 
           <textarea
@@ -844,13 +852,13 @@ setVerseQuery(value);
                        resize-none"
             value={editedSermon.notes || ''}
             onChange={handleNotesChange}
-            placeholder={t.notes_placeholder}
+            placeholder={t('notes_placeholder')}
           />
 
           {/* Contador de palabras / caracteres + limpiar */}
           <div className="mt-1 flex justify-between text-xs text-gray-400">
             <span>
-              {wordCount} palabras · {charCount} caracteres
+              {wordCount} {t("words")} · {charCount}  {t("characters")}
             </span>
 
             <button
@@ -862,7 +870,7 @@ setVerseQuery(value);
               }
                 className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium"
             >
-              Limpiar notas
+             {t("clear_notes")}
             </button>
           </div>
         </div>
@@ -875,7 +883,7 @@ setVerseQuery(value);
             className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm
                        hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
           >
-            ← Volver
+            ← {t("back")}
           </button>
 
           <button
@@ -884,7 +892,7 @@ setVerseQuery(value);
             className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold
                        hover:bg-blue-700 shadow-sm"
           >
-            Guardar
+            {t("save")}
           </button>
         </div>
       </div>

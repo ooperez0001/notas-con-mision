@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { PlusCircle, Search } from 'lucide-react';
 import { Sermon, UserProfile, Language } from '../types';
 import { SermonEditor } from './SermonEditor';
-import { translations } from '../services/translations';
+import { translations, getTranslation } from "../services/translations";
+
 
 interface SermonsListProps {
   sermons: Sermon[];
@@ -20,7 +21,9 @@ const normalizeText = (text: string) => text ? text.toLowerCase().normalize("NFD
 export const SermonsList: React.FC<SermonsListProps> = ({ sermons, setSermons, user, onOpenPremium, language, preferredVersion }) => {
   const [internalSelectedSermon, setInternalSelectedSermon] = useState<Sermon | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const t = translations[language];
+ const t = (key: keyof typeof translations["es"]) =>
+  getTranslation(language, key);
+
 
   if (internalSelectedSermon) {
     return (
@@ -81,11 +84,12 @@ export const SermonsList: React.FC<SermonsListProps> = ({ sermons, setSermons, u
   return (
     <div className="p-6 animate-fade-in max-w-2xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">{t.sermons_title}</h1>
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">{t("sermons_title")}</h1>
         <button 
             onClick={handleAddNewSermon} 
             className="bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 active:scale-95 transition-all"
-            aria-label={t.new_sermon}
+            aria-label={t("new_sermon")}
+
         >
             <PlusCircle size={24} />
         </button>
@@ -95,7 +99,8 @@ export const SermonsList: React.FC<SermonsListProps> = ({ sermons, setSermons, u
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={20} />
           <input 
             type="text" 
-            placeholder={t.search_sermons} 
+            placeholder={t("search_sermons")}
+
             value={searchQuery} 
             onChange={(e) => setSearchQuery(e.target.value)} 
             className="w-full border-2 border-transparent bg-white dark:bg-gray-800 shadow-sm rounded-xl p-3 pl-10 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all placeholder-gray-400 dark:placeholder-gray-500 dark:text-white"
@@ -112,16 +117,18 @@ export const SermonsList: React.FC<SermonsListProps> = ({ sermons, setSermons, u
             >
                 <div className="flex justify-between items-start">
                     <h3 className={`font-bold text-lg group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors ${!sermon.title ? 'text-gray-400 italic' : 'text-gray-800 dark:text-gray-100'}`}>
-                        {sermon.title || t.untitled}
+                        {sermon.title || t("untitled")}
                     </h3>
                     <span className="text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded">{new Date(sermon.date).toLocaleDateString(language === 'en' ? 'en-US' : language === 'pt' ? 'pt-BR' : 'es-ES', { month: 'short', day: 'numeric' })}</span>
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{sermon.preacher || t.no_preacher}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{sermon.preacher || t("no_preacher")}
+</p>
                 
                 {/* Mostrar snippet de la nota si la coincidencia está en las notas */}
                 {searchQuery && normalizeText(sermon.notes).includes(normalizeText(searchQuery)) && (
                     <div className="mt-3 text-xs text-gray-600 dark:text-gray-400 bg-yellow-50 dark:bg-yellow-900/10 p-2 rounded-lg border border-yellow-100 dark:border-yellow-900/30">
-                        <span className="font-bold text-yellow-700 dark:text-yellow-500">{t.in_notes}</span> 
+                        <span className="font-bold text-yellow-700 dark:text-yellow-500">{t("in_notes")}
+</span> 
                         <span className="italic"> "...{(sermon.notes || '').substring(0, 100).replace(/\n/g, ' ')}..."</span>
                     </div>
                 )}
@@ -134,8 +141,8 @@ export const SermonsList: React.FC<SermonsListProps> = ({ sermons, setSermons, u
     }}
     className="text-xs text-red-500 hover:text-red-600 hover:underline"
   >
-    Eliminar
-  </button>
+    {t("delete")}
+  </button> 
 </div>
 
                 {sermon.verses.length > 0 && (
@@ -154,7 +161,8 @@ export const SermonsList: React.FC<SermonsListProps> = ({ sermons, setSermons, u
             ))
         ) : (
             <div className="text-center py-10 opacity-50 dark:text-gray-400">
-                <p>{t.no_sermons_found}</p>
+                <p>{t("no_sermons_found")}</p>
+
             </div>
         )}
       </div>
