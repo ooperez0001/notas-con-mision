@@ -51,6 +51,8 @@ const [addingPassage, setAddingPassage] = useState(false);
 const [passageError, setPassageError] = useState<string | null>(null);
 const [searchResults, setSearchResults] = useState<KeyPassageOption[]>([]);
 const [versionSuggestions, setVersionSuggestions] = useState<KeyPassage[]>([]);
+const [lastChapterRef, setLastChapterRef] = useState<string>("");
+const [availableVersionKeys, setAvailableVersionKeys] = useState<string[]>([]);
 const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
 const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
 const [keepOpen, setKeepOpen] = useState(false);
@@ -198,6 +200,9 @@ if (!versionsObj) {
   return;
 }
 console.log("[SUGGEST] versionsObj keys:", Object.keys(versionsObj));
+setLastChapterRef(ref);
+setAvailableVersionKeys(Object.keys(versionsObj));
+
 console.log("[SUGGEST] versionsObj sample (NVI):", (versionsObj as any)["NVI"]);
 
 // ✅ usamos versionsObj (no result.versions) para asegurar que vienen todas las versiones
@@ -317,6 +322,66 @@ console.log("[SUGGEST] suggestions length:", suggestions.length);
     }
   }, 350);
 };
+// =======================
+// Version switch (chips)
+// =======================
+
+const loadChapterInVersion = async (versionKey: string) => {
+  if (!lastChapterRef) return;
+
+  // 1) Traer el capítulo en la versión seleccionada
+  const result = await fetchVerseFromAPI(lastChapterRef, versionKey);
+  if (!result) return;
+
+  const ref = (result as any)?.ref || lastChapterRef;
+
+  // 2) Normalizar versículos del resultado (tu API devuelve data.verses)
+  const verses =
+    Array.isArray((result as any)?.data?.verses) ? (result as any).data.verses : [];
+
+    if (!verses.length) {
+  console.warn("[VersionSwitch] Sin versos para", versionKey, "ref:", lastChapterRef, "result:", result);
+  return; // NO cambiamos la UI si esa versión no devolvió capítulo
+}
+
+  // 3) Construir 1 sugerencia “capítulo con texto”
+  const chapterSuggestion = {
+    id: `${ref}-${versionKey}`,
+    reference: ref,
+    version: String(versionKey),
+    text: verses
+      .map((v: any) => `${v.number ?? ""} ${String(v.verse ?? v.text ?? "").trim()}`.trim())
+      .filter(Boolean)
+      .join("\n"),
+    verses,
+    isJesusWords: false,
+  };
+  const allowed = VERSIONS_BY_LANG[language] ?? [];
+const allowedUpper = allowed.map((v) => v.toUpperCase());
+
+
+  // 4) Mantener botones de versiones (sin texto) usando availableVersionKeys
+ const versionButtons = (availableVersionKeys || [])
+  .filter((vk) => {
+    const up = String(vk).toUpperCase();
+    return allowedUpper.length === 0
+      ? up !== String(versionKey).toUpperCase()
+      : allowedUpper.includes(up) && up !== String(versionKey).toUpperCase();
+  })
+  .map((vk) => ({
+    id: `${ref}-${vk}`,
+    reference: ref,
+    version: String(vk),
+    text: "",
+    verses: [],
+    isJesusWords: false,
+  }));
+
+
+  setSelectedVersion(String(versionKey)); // para que quede “seleccionada”
+  setVersionSuggestions([chapterSuggestion, ...versionButtons]);
+};
+
 
  const handleAddPassage = async (refOverride?: string, versionOverride?: string): Promise<void> => {
 
@@ -624,97 +689,94 @@ setVerseQuery(value);
   </div>
 </div>
 
-
 {versionSuggestions.length > 0 && (
   <div
     className={`mt-2 rounded-xl bg-white shadow-sm max-h-[320px] overflow-y-auto border ${
       keepOpen ? "border-blue-500 ring-1 ring-blue-200" : "border-gray-200"
     }`}
   >
-{keepOpen && (
-  <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-3 py-2 text-xs text-gray-600">
-    Lista abierta: selecciona varios versículos 👇
-  </div>
-)}
+    {keepOpen && (
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-3 py-2 text-xs text-gray-600">
+        Lista abierta: selecciona varios versículos 👇
+      </div>
+    )}
 
+    {(() => {
+      const chapterSuggestions = versionSuggestions.filter(
+        (s) =>
+          (s.text && s.text.trim().length > 0) ||
+          (s.verses && s.verses.length > 0)
+      );
 
+      const versionOnlySuggestions = versionSuggestions.filter(
+        (s) =>
+          (!s.text || s.text.trim().length === 0) &&
+          (!s.verses || s.verses.length === 0)
+      );
 
-    {versionSuggestions.map((s) => (
-      <button
-        key={`${s.reference}-${s.version}`}
+      return (
+        <div className="px-3 py-2">
+          {/* 📖 Capítulo con texto */}
+          {chapterSuggestions.map((s) => (
+            <div key={`${s.reference}-${s.version}`} className="mb-3">
+              <span className="font-medium capitalize">{s.reference}</span>
 
-        type="button"
-      onClick={() => {
-  setNewPassageRef(s.reference);
-  setVerseQuery(s.reference); // opcional, si quieres que el input refleje lo elegido
-  setVersionSuggestions([]);
-  handleAddPassage();
-}}
+              <div className="mt-2 space-y-1 text-xs text-gray-700">
+                {(Array.isArray(s.verses) ? s.verses : []).map(
+                  (v: any, idx: number) => {
+                    const verseNumber = v.number ?? v.verse ?? v.num ?? idx + 1;
+                    const verseText = v.text ?? v.verse ?? v.content ?? "";
 
-       className="w-full text-left px-4 py-2 hover:bg-blue-50 flex justify-between items-start gap-3"
+                    return (
+                      <div
+                        key={idx}
+                        className="leading-relaxed cursor-pointer hover:bg-blue-100 rounded px-1"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
 
-      >
-        <span className="font-medium capitalize">{s.reference}</span>
-{s.verses && Array.isArray(s.verses) ? (
-  <div className="mt-2 space-y-1 text-xs text-gray-700">
-  {s.verses.map((v: any, idx: number) => {
-  const verseNumber = (v.number ?? v.verse ?? v.num) || idx + 1;
-  const verseText = v.text || v.verse || v.content || "";
+                          const baseRef = s.reference.replace(/:$/, "");
+                          const verseRef = `${baseRef}:${verseNumber}`;
 
-  return (
-    <div
-      key={idx}
-      className="leading-relaxed cursor-pointer hover:bg-blue-100 rounded px-1"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
+                          if (keepOpen) {
+                            setNewPassageRef(`${baseRef}:`);
+                            setVerseQuery(`${baseRef}:`);
+                          }
 
-        // 1) baseRef sin ":" final
-        const baseRef = (s.reference || "").replace(/:$/, "");
-        // 2) referencia final del verso (Mateo 6:5)
-        const verseRef = `${baseRef}:${verseNumber}`;
+                          if (!keepOpen) setVersionSuggestions([]);
 
-        // 3) si keepOpen está activo, dejamos el input listo en "Mateo 6:"
-        if (keepOpen) {
-          setNewPassageRef(`${baseRef}:`);
-          setVerseQuery(`${baseRef}:`);
-        }
+                          handleAddPassage(verseRef);
+                        }}
+                      >
+                        <strong>{verseNumber}</strong> {verseText}
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+            </div>
+          ))}
 
-        // 4) solo cerramos la lista si NO está keepOpen
-        if (!keepOpen) setVersionSuggestions([]);
+          {/* 🔘 Botones de versiones (sin texto) */}
+          {versionOnlySuggestions.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2 justify-end">
+              {versionOnlySuggestions.map((s) => (
+                <button
+                  key={`btn-${s.version}`}
+                  type="button"
+                  className="px-3 py-1 rounded-full border text-xs bg-white hover:bg-gray-50"
+                  onClick={() => loadChapterInVersion(String(s.version))}
 
-        // 5) agrega el versículo
-        handleAddPassage(verseRef);
-      }}
-    >
-      <span className="font-semibold mr-1">{verseNumber}.</span>
-      <span>{verseText}</span>
-    </div>
-  );
-})}
-
-  </div>
-) : (
-  s.text && (
-   <div className="mt-1 text-xs text-gray-600 whitespace-pre-line max-h-48 overflow-auto pr-2">
-  {s.text}
-</div>
-
-  )
-)}
-
-        <span
-          className={`text-xs px-2 py-1 rounded-full ${
-            s.version === preferredVersion
-              ? "bg-yellow-100 text-yellow-800"
-              : "bg-gray-100 text-gray-700"
-          }`}
-        >
-          {s.version}
-          {s.version === preferredVersion && " ⭐"}
-        </span>
-      </button>
-    ))}
+                  title={`Cambiar a ${String(s.version)}`}
+                >
+                  {String(s.version).toUpperCase()}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    })()}
   </div>
 )}
 
