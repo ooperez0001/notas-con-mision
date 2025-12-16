@@ -62,7 +62,7 @@ open_list_multiple: "Lista abierta: selecciona varios versículos 👇",
 words: "palabras",
 characters: "caracteres",
 clear_notes: "Limpiar notas",
-
+copy: "Copiar",
 
     
     // Smart Bible
@@ -175,6 +175,7 @@ tip_keep_open_off: "Tip: turn this off if you only want one verse and close the 
 words: "words",
 characters: "characters",
 clear_notes: "Clear notes",
+copy: "Copy",
 
     // Smart Bible
     bible_title: "Smart Bible",
@@ -286,7 +287,7 @@ tip_keep_open_off: "Dica: desative se quiser apenas um versículo e fechar a lis
 words: "palavras",
 characters: "caracteres",
 clear_notes: "Limpar notas",
-
+copy: "Copiar",
 
 
 

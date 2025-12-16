@@ -953,7 +953,7 @@ const verseRef = `${baseRef}:${verseNumber}`;
             onClick={() => handleCopyPassage(p)}
             className="text-xs px-3 py-1 rounded-full border border-blue-200 text-blue-700 hover:bg-blue-50"
           >
-            Copiar
+            {t("copy")}
           </button>
 
           <button
@@ -961,7 +961,7 @@ const verseRef = `${baseRef}:${verseNumber}`;
             onClick={() => handleRemovePassage(pid)}
             className="text-xs px-3 py-1 rounded-full border border-red-200 text-red-600 hover:bg-red-50"
           >
-            Eliminar
+            {t("delete")}
           </button>
         </div>
       </div>
