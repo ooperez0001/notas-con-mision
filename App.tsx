@@ -77,7 +77,7 @@ const MOCK_DATA = {
 };
 
 const App: React.FC = () => {
-  console.log('✅ App se está renderizando');
+ 
   const [user, setUser] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);

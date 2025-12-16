@@ -192,7 +192,7 @@ const toSave = {
 
 
 
-  console.log("[SAVE] toSave.keyPassages:", toSave.keyPassages);
+  
 
   setSermons((prevSermons) => {
     const idx = prevSermons.findIndex((s) => s.id === toSave.id);
@@ -219,12 +219,6 @@ const toSave = {
       setIsSearchingSuggestions(true);
 
  const result = await fetchVerseFromAPI(value);
-
-
-  console.log("[SUGGEST]", value, "keys:", Object.keys(result || {}), result);
-console.log("[SUGGEST] has versions?", !!(result as any)?.versions, "has verses?", Array.isArray((result as any)?.verses));
-console.log("[SUGGEST] version keys:", Object.keys((result as any).versions || {}));
-
 
 // ✅ Normalizamos formatos: puede venir como {versions:{...}} o como {verses:[...]}
 const ref = (result?.ref || value).trim();
@@ -262,12 +256,11 @@ if (!versionsObj) {
   setVersionSuggestions([]);
   return;
 }
-console.log("[SUGGEST] versionsObj keys:", Object.keys(versionsObj));
+
 setLastChapterRef(ref);
 setAvailableVersionKeys(Object.keys(versionsObj));
 
-console.log("[SUGGEST] versionsObj sample (NVI):", (versionsObj as any)["NVI"]);
-
+ 
 // ✅ usamos versionsObj (no result.versions) para asegurar que vienen todas las versiones
 const allowedVersions = VERSIONS_BY_LANG[language] ?? []; // ej: ["rvr1960","nvi","ntv","dhh","lbla"]
 
@@ -373,9 +366,7 @@ if (arr.length === 0) {
 suggestions.sort((a, b) =>
   a.version === preferredVersion ? -1 : b.version === preferredVersion ? 1 : 0
 );
-  
-console.log("[SUGGEST] suggestions length:", suggestions.length);
-
+ 
       setVersionSuggestions(suggestions);
     } catch (e) {
       console.error("[SUGGEST] scheduleSuggestionsSearch error:", e);
@@ -522,9 +513,7 @@ const newPassage: KeyPassage = {
     setPassageError('Ocurrió un error al buscar el pasaje.');
   } finally {
   setAddingPassage(false);
-
-  console.log("keepOpen =", keepOpen);
-
+  
   if (!keepOpen) {
     setNewPassageRef('');
     setVerseQuery('');

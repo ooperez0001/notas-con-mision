@@ -122,19 +122,19 @@ export const SermonsList: React.FC<SermonsListProps> = ({ sermons, setSermons, u
 const passageLabels = rawPassages
   .map((p: any) => (typeof p === "string" ? p : p.reference ?? p.ref ?? ""))
   .filter(Boolean);
-
-
-            console.log("[LIST CARD]", sermon.id, {
-  verses: (sermon as any).verses,
-  keyPassages: (sermon as any).keyPassages,
-  passageLabels,
-});
-
-
+            
           return (
             <div
               key={sermon.id}
-              onClick={() => setInternalSelectedSermon(sermon)}
+              onClick={() =>
+  setInternalSelectedSermon({
+    ...(sermon as any),
+    verses: (sermon as any).verses ?? [],
+    keyPassages: (sermon as any).keyPassages ?? [],
+    passageLabels,
+  })
+}
+
               className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 cursor-pointer hover:shadow-md hover:border-blue-200 dark:hover:border-blue-700 transition-all group"
             >
               <div className="flex justify-between items-start">

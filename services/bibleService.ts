@@ -216,8 +216,7 @@ try {
     const apiVersion = toApiVersion(uiVersion);
 const url = `${BIBLE_API_BASE_URL}/read/${apiVersion}/${apiBookName}/${chapter}`;
 
-    console.log('[BibleService] Fetching:', url);
-
+    
     const resp = await fetch(url);
     if (!resp.ok) {
       console.error('[BibleService] Error en respuesta de la API:', resp.status, resp.statusText);

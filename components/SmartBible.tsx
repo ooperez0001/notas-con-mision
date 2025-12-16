@@ -118,7 +118,7 @@ const handleCopyVerse = async (verse: any) => {
 
   try {
     await navigator.clipboard.writeText(formatted);
-    console.log("Versículo copiado:", formatted);
+    
   } catch (error) {
     console.error("Error al copiar el versículo", error);
   }
