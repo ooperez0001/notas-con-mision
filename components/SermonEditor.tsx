@@ -536,15 +536,37 @@ const newPassage: KeyPassage = {
 }
 };
 // Copiar pasaje completo
-const handleCopyPassage = async (p: KeyPassage) => {
-  const textToCopy = `${p.reference} (${p.version}) — ${p.text}`;
+// Copiar pasaje completo (soporta string u objeto)
+const handleCopyPassage = async (p: any) => {
+  const reference =
+    typeof p === "string"
+      ? p
+      : (p.reference ?? p.ref ?? p.verseRef ?? "");
+
+  const version =
+    typeof p === "string"
+      ? ""
+      : (p.version ?? p.versionOverride ?? "");
+
+  // 1) si es string, buscamos el texto en editedSermon.verses
+  // 2) si es objeto, usamos p.text
+  const text =
+    typeof p === "string"
+      ? ((editedSermon.verses || []).find((v: any) => v.ref === p)?.text ?? "")
+      : (p.text ?? p.verseText ?? "");
+
+  const textToCopy =
+    version
+      ? `${reference} (${version}) — ${text}`
+      : `${reference} — ${text}`;
+
   try {
     await navigator.clipboard.writeText(textToCopy);
-    // opcional: más adelante podemos mostrar un pequeño "Copiado ✅"
   } catch (error) {
-    console.error('Error al copiar pasaje:', error);
+    console.error("Error al copiar pasaje:", error);
   }
 };
+
 
 // Eliminar pasaje de la lista
 const handleRemovePassage = (pid: string) => {
