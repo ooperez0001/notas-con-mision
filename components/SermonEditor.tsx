@@ -46,6 +46,8 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({ sermon, setSelectedS
   const notesRef = useRef<HTMLTextAreaElement>(null);
   const suggestionsTimerRef = useRef<number | null>(null);
  const t = (key: keyof typeof translations["es"]) => getTranslation(language, key);
+const [sermonTitle, setSermonTitle] = useState("");
+const [preacherName, setPreacherName] = useState("");
 
 
 const [keyPassages, setKeyPassages] = useState<KeyPassage[]>([]);
@@ -65,6 +67,23 @@ const VERSIONS_BY_LANG: Record<string, string[]> = {
   en: ["kjv", "niv"],
   pt: ["arc"],
 };
+// Helper: etiqueta bonita para mostrar
+const getPassageLabel = (p: any) =>
+  typeof p === "string" ? p : (p.reference ?? p.ref ?? "");
+
+// Helper: id estable para cada pasaje (evita que "Eliminar" borre todos)
+const getPassageId = (p: any, index: number) => {
+  if (p && typeof p === "object" && "id" in p && p.id) return String(p.id);
+
+  const label = getPassageLabel(p);
+  const version = (p && typeof p === "object" && (p as any).version) ? String((p as any).version) : "";
+  return `${label}::${version}::${index}`;
+};
+
+
+useEffect(() => {
+  setKeyPassages((sermon as any)?.keyPassages ?? []);
+}, [sermon?.id]);
 
 
  useEffect(() => {
@@ -141,14 +160,54 @@ const VERSIONS_BY_LANG: Record<string, string[]> = {
      setTimeout(() => setCopySuccess(null), 2000);
   };
 
-  const handleSave = () => {
-    setSermons(prevSermons => {
-      const exists = prevSermons.find(s => s.id === editedSermon.id);
-      if (exists) { return prevSermons.map(s => s.id === editedSermon.id ? editedSermon : s); }
-      return [editedSermon, ...prevSermons];
-    });
-    setSelectedSermon(null);
-  };
+const handleSave = () => {
+const toSave = {
+  ...editedSermon,
+
+  // ✅ guardar el texto completo de los versículos seleccionados
+ verses:
+ 
+  editedSermon.verses && editedSermon.verses.length > 0
+    ? editedSermon.verses.map((v: any) => ({
+        ref: v?.ref ?? v?.reference ?? v?.verseRef ?? "",
+        text: v?.text ?? v?.verseText ?? "",
+        version: v?.version ?? v?.versionOverride ?? v?.v ?? "",
+      }))
+    : ((editedSermon as any).passageLabels ?? []).map((p: any) => ({
+        ref: p?.ref ?? p?.reference ?? p?.verseRef ?? "",
+        text: p?.text ?? p?.verseText ?? p?.label ?? "",
+        version: p?.version ?? p?.versionOverride ?? "",
+      })),
+
+
+
+  // ✅ guardar solo las referencias (juan 3:1, etc.)
+  keyPassages: (keyPassages ?? [])
+    .map((p: any) => {
+      if (typeof p === "string") return p;
+      return p?.reference ?? p?.ref ?? p?.verseRef ?? p?.passageRef ?? "";
+    })
+    .filter(Boolean),
+};
+
+
+
+  console.log("[SAVE] toSave.keyPassages:", toSave.keyPassages);
+
+  setSermons((prevSermons) => {
+    const idx = prevSermons.findIndex((s) => s.id === toSave.id);
+    if (idx >= 0) {
+      const copy = [...prevSermons];
+      copy[idx] = toSave;
+      return copy;
+    }
+    return [toSave, ...prevSermons];
+  });
+
+  setSelectedSermon(null);
+};
+
+
   const scheduleSuggestionsSearch = (value: string) => {
   // limpiamos timer anterior
   if (suggestionsTimerRef.current) {
@@ -433,6 +492,17 @@ const chosenVersion = versionOverride || selectedVersion || preferredVersion;
 
     // 5) Referencia normalizada (para que SIEMPRE se vea "Juan 3", "Mateo 6:33", etc.)
 const reference = (referenceData?.ref || ref || '').trim();
+// ✅ Guardar el pasaje con texto completo (para que no se pierda al reabrir)
+const newVerse = {
+  ref: reference,          // ej: "juan 3:1" o "juan 3"
+  text: fullText,          // texto del capítulo/verso
+  version: chosenVersion,  // ej: "RVR60"
+};
+setEditedSermon((prev: any) => ({
+  ...prev,
+  verses: [...(prev.verses || []), newVerse],
+  keyPassages: [...(prev.keyPassages || []), reference],
+}));
 
 
 // 6) Crear el pasaje clave que se guarda en el sermón
@@ -442,7 +512,6 @@ const newPassage: KeyPassage = {
   version: chosenVersion,            // ✅ versión
   text: fullText,                    // ✅ capítulo completo o versículo según lo que escribas
 };
-
 
     // 6) Guardarlo en el estado de pasajes
     setKeyPassages((prev) => [...prev, newPassage]);
@@ -465,11 +534,7 @@ const newPassage: KeyPassage = {
     setPassageError(null);
   }
 }
-
-
 };
-
-
 // Copiar pasaje completo
 const handleCopyPassage = async (p: KeyPassage) => {
   const textToCopy = `${p.reference} (${p.version}) — ${p.text}`;
@@ -482,9 +547,20 @@ const handleCopyPassage = async (p: KeyPassage) => {
 };
 
 // Eliminar pasaje de la lista
-const handleRemovePassage = (id: string) => {
-  setKeyPassages(prev => prev.filter(p => p.id !== id));
+const handleRemovePassage = (pid: string) => {
+  // 1) quita de la lista visible de pasajes
+  setKeyPassages((prev) =>
+    prev.filter((p, index) => getPassageId(p, index) !== pid)
+  );
+
+  // 2) quita también el texto guardado de ese pasaje
+  setEditedSermon((prev: any) => ({
+    ...prev,
+    keyPassages: (prev.keyPassages || []).filter((r: string) => r !== pid),
+    verses: (prev.verses || []).filter((v: any) => (v.ref ?? v.reference) !== pid),
+  }));
 };
+
 
   const handleDeleteConfirm = () => {
     setSermons(prev => prev.filter(s => s.id !== sermon.id));
@@ -574,7 +650,10 @@ const handleClearNotes = () => {
       }
 
       setIsSummarizing(true);
-      const versesText = (editedSermon.verses || []).map(v => `${v.ref}: ${v.text}`).join('\n');
+     const versesText = (editedSermon.verses || [])
+  .map((v) => String(v.ref) + ": " + String(v.text))
+  .join("\n");
+
       const summary = await summarizeSermon(editedSermon.title, editedSermon.notes, versesText);
       
       // Append summary to notes
@@ -590,17 +669,40 @@ const handleClearNotes = () => {
   const wordCount = notesText.trim() ? notesText.trim().split(/\s+/).length : 0;
   const charCount = notesText.length;
 
-          return (
+         
+  return (
+    
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 transition-colors duration-200">
       <div className="p-6 max-w-3xl mx-auto space-y-4">
-        {/* Encabezado básico */}
-       <h1 className="text-2xl font-bold mb-2">
-  {editedSermon.title || t('new_sermon')}
-</h1>
+       
 
-<p className="text-sm text-gray-500">
-  {t('preacher_ph')}: {editedSermon.preacher || "—"}
-</p>
+
+       
+        {/* Encabezado básico */}
+<input
+  type="text"
+  value={editedSermon.title ?? ""}
+  onChange={(e) =>
+    setEditedSermon((prev) => ({ ...prev, title: e.target.value }))
+  }
+  placeholder={t("new_sermon")}
+  className="w-full text-2xl font-bold mb-4 bg-transparent outline-none border-b border-gray-200 dark:border-gray-700"
+/>
+
+
+<div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+  <span>{t("preacher_ph")}:</span>
+  <input
+    type="text"
+    value={editedSermon.preacher ?? ""}
+    onChange={(e) =>
+      setEditedSermon((prev) => ({ ...prev, preacher: e.target.value }))
+    }
+    placeholder="—"
+    className="bg-transparent outline-none border-b border-dashed border-gray-300 dark:border-gray-600 px-1"
+  />
+</div>
+
 
 {/* PASAJES CLAVE */}
 <div className="mb-6">
@@ -611,48 +713,44 @@ const handleClearNotes = () => {
 
   {/* Barra de búsqueda de pasaje */}
   <div className="flex items-center gap-2">
-    <input
-    
-      type="text"
-      value={newPassageRef}
-onChange={(e) => {
-  const value = e.target.value;
-  setNewPassageRef(value);
+<input
+  type="text"
+  value={newPassageRef}
+  onChange={(e) => {
+    const value = e.target.value;
+    setNewPassageRef(value);
 
-  // Si está vacío, limpiamos sugerencias
-  if (!value.trim()) {
-    setVersionSuggestions([]);
-    return;
-  }
-
-  // ✅ NO llamamos a la API hasta que haya al menos un número (ej: "juan 3")
-  const hasNumber = /\d/.test(value);
-  if (!hasNumber) {
-    setVersionSuggestions([]);
-    return;
-  }
-
-  // ✅ debounce
-  scheduleSuggestionsSearch(value);
-
-// Siempre actualiza verseQuery cuando el usuario escribe (capítulo o versículo)
-setVerseQuery(value);
-
-
-}}
-
-      onKeyDown={e => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    if (!addingPassage) {
-      handleAddPassage();
+    // Si está vacío, limpiamos sugerencias
+    if (!value.trim()) {
+      setVersionSuggestions([]);
+      return;
     }
-  }
-}}
-      placeholder={t('add_passage_ph')}
 
-      className="flex-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-    />
+    // ✅ NO llamamos a la API hasta que haya al menos un número (ej: "juan 3")
+    const hasNumber = /\d/.test(value);
+    if (!hasNumber) {
+      setVersionSuggestions([]);
+      return;
+    }
+
+    // ✅ debounce
+    scheduleSuggestionsSearch(value);
+
+    // Siempre actualiza verseQuery
+    setVerseQuery(value);
+  }}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (!addingPassage) {
+        handleAddPassage();
+      }
+    }
+  }}
+  placeholder={t("add_passage_ph")}
+  className="flex-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+/>
+
     {isSearchingSuggestions && (
   <div className="mt-2 text-sm text-gray-500">
     Buscando versiones...
@@ -743,8 +841,8 @@ setVerseQuery(value);
                           e.preventDefault();
                           e.stopPropagation();
 
-                          const baseRef = s.reference.replace(/:$/, "");
-                          const verseRef = `${baseRef}:${verseNumber}`;
+                          const baseRef = s.reference.replace(/:\d+$/, ""); // quita ":NUM" del final si ya existe
+const verseRef = `${baseRef}:${verseNumber}`;
 
                           if (keepOpen) {
                             setNewPassageRef(`${baseRef}:`);
@@ -787,35 +885,55 @@ setVerseQuery(value);
     })()}
   </div>
 )}
-
-
     
   {/* Error al buscar */}
   {passageError && (
     <p className="text-xs text-red-500 mt-1">{passageError}</p>
   )}
 
-  {/* Lista de pasajes agregados */}
-  <div className="mt-3 space-y-2">
-    {keyPassages.map((p) => (
+ {/* Lista de pasajes agregados */}
+<div className="mt-3 space-y-2">
+  {keyPassages.map((p, index) => {
+    const pid = getPassageId(p, index);
+    const label =
+  typeof p === "string" ? p : ((p as any).reference ?? getPassageLabel(p));
+
+
+    const text =
+  typeof p === "string"
+    ? ((editedSermon.verses || []).find((v: any) => v.ref === p)?.text ?? "")
+    : ((p as any).text ?? "");
+
+
+    const version =
+      typeof p === "string"
+        ? ""
+        : ((p as any).version ?? "");
+
+    return (
+      
       <div
-        key={p.id}
+        key={pid}
         className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm flex justify-between items-start gap-3"
       >
-        <div>
+        <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className="font-semibold capitalize">{p.reference}</span>
-            <span className="text-[10px] px-2 py-1 rounded-full bg-white border border-green-200">
-              {p.version}
-            </span>
+            <span className="font-semibold capitalize">{label}</span>
+
+            {version ? (
+              <span className="text-[10px] px-2 py-1 rounded-full bg-white border border-green-200">
+                {version}
+              </span>
+            ) : null}
           </div>
-  <div className="mt-1 max-h-[260px] overflow-y-auto pr-2">
-  <p className="text-[13px] text-green-800 italic whitespace-pre-line">
-    "{p.text}"
-  </p>
-</div>
 
-
+          {text ? (
+            <div className="mt-1 max-h-[260px] overflow-y-auto pr-2">
+              <p className="text-[13px] text-green-800 italic whitespace-pre-line">
+                {text}
+              </p>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -826,17 +944,18 @@ setVerseQuery(value);
           >
             Copiar
           </button>
+
           <button
             type="button"
-            onClick={() => handleRemovePassage(p.id)}
+            onClick={() => handleRemovePassage(pid)}
             className="text-xs px-3 py-1 rounded-full border border-red-200 text-red-600 hover:bg-red-50"
           >
             Eliminar
           </button>
         </div>
       </div>
-    ))}
-  </div>
+    );
+  })}
 </div>
 
         {/* Editor de notas sencillo */}
@@ -896,6 +1015,7 @@ setVerseQuery(value);
           </button>
         </div>
       </div>
+    </div>
     </div>
   );
 };
