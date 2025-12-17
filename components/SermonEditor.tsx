@@ -190,9 +190,7 @@ const toSave = {
     .filter(Boolean),
 };
 
-
-
-  
+ 
 
   setSermons((prevSermons) => {
     const idx = prevSermons.findIndex((s) => s.id === toSave.id);
@@ -701,18 +699,32 @@ const handleClearNotes = () => {
 />
 
 
-<div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-  <span>{t("preacher_ph")}:</span>
+<div className="flex items-center justify-between text-sm text-gray-500 mb-4 gap-4">
+  {/* Predicador */}
+  <div className="flex items-center gap-2">
+    <span>{t("preacher_ph")}:</span>
+    <input
+      type="text"
+      value={editedSermon.preacher ?? ""}
+      onChange={(e) =>
+        setEditedSermon((prev) => ({ ...prev, preacher: e.target.value }))
+      }
+      placeholder="_"
+      className="bg-transparent outline-none border-b border-dashed border-gray-300 dark:border-gray-600 px-1"
+    />
+  </div>
+
+  {/* Fecha */}
   <input
-    type="text"
-    value={editedSermon.preacher ?? ""}
+    type="date"
+    value={(editedSermon.date ?? "").slice(0, 10)}
     onChange={(e) =>
-      setEditedSermon((prev) => ({ ...prev, preacher: e.target.value }))
+      setEditedSermon((prev) => ({ ...prev, date: e.target.value }))
     }
-    placeholder="—"
-    className="bg-transparent outline-none border-b border-dashed border-gray-300 dark:border-gray-600 px-1"
+    className="bg-transparent border border-gray-300 dark:border-gray-600 rounded-xl px-2 py-1 text-xs"
   />
 </div>
+
 
 
 {/* PASAJES CLAVE */}

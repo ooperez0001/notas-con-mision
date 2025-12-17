@@ -17,6 +17,11 @@ interface SermonsListProps {
 }
 
 const normalizeText = (text: string) => text ? text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : '';
+const parseYMD = (ymd?: string) => {
+  if (!ymd) return null;
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(y, m - 1, d); // fecha LOCAL, sin UTC
+};
 
 export const SermonsList: React.FC<SermonsListProps> = ({ sermons, setSermons, user, onOpenPremium, language, preferredVersion }) => {
   const [internalSelectedSermon, setInternalSelectedSermon] = useState<Sermon | null>(null);
@@ -147,7 +152,7 @@ const passageLabels = rawPassages
                 </h3>
 
                 <span className="text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded">
-                  {new Date(sermon.date).toLocaleDateString(
+                  {parseYMD(sermon.date)?.toLocaleDateString(
                     language === "en" ? "en-US" : language === "pt" ? "pt-BR" : "es-ES",
                     { month: "short", day: "numeric" }
                   )}
