@@ -1,7 +1,15 @@
 import { GoogleGenAI } from "@google/genai";
 
-// Initialize the client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// ✅ En Vite se usa import.meta.env
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string;
+
+if (!apiKey) {
+  console.warn("Falta VITE_GEMINI_API_KEY en .env.local");
+}
+
+const ai = new GoogleGenAI({ apiKey });
+
+
 
 export const generateDevotional = async (verseText: string, verseRef: string): Promise<string> => {
   try {
@@ -73,4 +81,23 @@ export const summarizeSermon = async (title: string, notes: string, verses: stri
     console.error("Error summarizing sermon:", error);
     return "Hubo un error al generar el resumen.";
   }
+};
+export const defineWordEs = async (term: string): Promise<string> => {
+  const clean = term.trim();
+  if (!clean) return "Escribe una palabra.";
+
+  const prompt =
+    `Define la palabra "${clean}" en español, de forma clara y corta.\n` +
+    `Devuelve:\n` +
+    `1) Tipo (sustantivo/verbo/etc.) si aplica\n` +
+    `2) Definición en 1-2 líneas\n` +
+    `3) Un ejemplo corto\n` +
+    `No traduzcas al inglés.`;
+
+  const resp = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: prompt,
+  });
+
+  return resp.text || "No pude generar la definición.";
 };
