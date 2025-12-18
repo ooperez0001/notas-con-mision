@@ -1471,7 +1471,20 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                       onClick={() => handleCopyPassage(p)}
                       className="text-xs px-3 py-1 rounded-full border border-blue-200 text-blue-700 hover:bg-blue-50"
                     >
-                      {t("copy")}
+                      <svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  strokeWidth="2"
+  strokeLinecap="round"
+  strokeLinejoin="round"
+  className="w-5 h-5"
+>
+  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+</svg>
+
                     </button>
 
                     <button
@@ -1479,7 +1492,23 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                       onClick={() => handleRemovePassage(pid)}
                       className="text-xs px-3 py-1 rounded-full border border-red-200 text-red-600 hover:bg-red-50"
                     >
-                      {t("delete")}
+                      <svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  strokeWidth="2"
+  strokeLinecap="round"
+  strokeLinejoin="round"
+  className="w-5 h-5"
+>
+  <path d="M3 6h18" />
+  <path d="M8 6V4h8v2" />
+  <path d="M6 6l1 16h10l1-16" />
+  <path d="M10 11v6" />
+  <path d="M14 11v6" />
+</svg>
+
                     </button>
                   </div>
                 </div>
@@ -1689,10 +1718,26 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                                   prev.filter((x) => x.term !== w.term)
                                 )
                               }
-                              className="text-red-600"
+                              className="text-red-500 hover:text-red-700"
                               title="Eliminar"
                             >
-                              🗑️
+                              <svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  strokeWidth="2"
+  strokeLinecap="round"
+  strokeLinejoin="round"
+  className="w-4 h-4"
+>
+  <path d="M3 6h18" />
+  <path d="M8 6V4h8v2" />
+  <path d="M6 6l1 16h10l1-16" />
+  <path d="M10 11v6" />
+  <path d="M14 11v6" />
+</svg>
+
                             </button>
                           </div>
 
