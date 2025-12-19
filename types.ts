@@ -17,7 +17,13 @@ export interface SavedVerse {
   text: string;
   version: string;
   isJesusWords?: boolean;
+
+  // ✅ extras opcionales para compatibilidad
+  reference?: string;
+  verseText?: string;
+  versionOverride?: string;
 }
+
 
 export interface Sermon {
   id: string;

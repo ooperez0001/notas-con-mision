@@ -166,12 +166,13 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
   const handleAddVerse = (version: string, verses: BibleVerse[]) => {
     const fullText = verses.map((v) => v.text).join(" ");
     const hasJesusWords = verses.some((v) => v.isJesusWords);
-    const newVerse: SavedVerse = {
-      ref: verseResults!.ref,
-      text: fullText,
-      version: version,
-      isJesusWords: hasJesusWords,
-    };
+
+  const newVerse: SavedVerse = {
+  ref: verseResults!.ref,
+  text: fullText,
+  version: version,
+  isJesusWords: hasJesusWords,
+};
 
     setEditedSermon((prev) => ({
       ...prev,
@@ -228,14 +229,27 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
         selectionStart + prefixWithNewline.length;
     }, 0);
   };
+const capitalizeRef = (ref: string) => {
+  const s = (ref || "").trim();
+  if (!s) return s;
 
-  const handleCopyVerse = (verse: SavedVerse) => {
-    navigator.clipboard.writeText(
-      `"${verse.text}" - ${verse.ref} (${verse.version})`
-    );
-    setCopySuccess(verse.ref);
-    setTimeout(() => setCopySuccess(null), 2000);
-  };
+  // Capitaliza la primera letra de cada palabra
+  // "mateo 6:12" -> "Mateo 6:12"
+  // "1 corintios 13:4" -> "1 Corintios 13:4"
+  return s.replace(/\p{L}+/gu, (w) => w.charAt(0).toUpperCase() + w.slice(1));
+};
+
+
+const handleCopyVerse = (verse: SavedVerse) => {
+  
+  const ref = capitalizeRef(verse.ref);
+  navigator.clipboard.writeText(
+    `${ref} (${verse.version}) — ${verse.text}`
+  );
+  setCopySuccess(verse.ref);
+  setTimeout(() => setCopySuccess(null), 2000);
+};
+
 
   const handleSave = () => {
     const toSave = {
@@ -245,17 +259,20 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
       verses:
         editedSermon.verses && editedSermon.verses.length > 0
           ? editedSermon.verses.map((v: any) => ({
-              ref: v?.ref ?? v?.reference ?? v?.verseRef ?? "",
-              text: v?.text ?? v?.verseText ?? "",
-              version: v?.version ?? v?.versionOverride ?? v?.v ?? "",
+
+          ref: capitalizeRef(v?.ref ?? v?.reference ?? v?.verseRef ?? ""),
+text: v?.text ?? v?.verseText ?? "",
+version: v?.version ?? v?.versionOverride ?? "",
+
+
             }))
           : ((editedSermon as any).passageLabels ?? []).map((p: any) => ({
-              ref: p?.ref ?? p?.reference ?? p?.verseRef ?? "",
+             ref: capitalizeRef(p?.ref ?? p?.reference ?? p?.verseRef ?? ""),
               text: p?.text ?? p?.verseText ?? p?.label ?? "",
               version: p?.version ?? p?.versionOverride ?? "",
             })),
 
-      // ✅ guardar solo las referencias (juan 3:1, etc.)
+      // ✅ guardar solo las referencias (Juan 3:1, etc.)
       keyPassages: (keyPassages ?? [])
         .map((p: any) => {
           if (typeof p === "string") return p;
@@ -1030,20 +1047,34 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
   const handleCopyPassage = async (p: any) => {
     const reference =
       typeof p === "string" ? p : p.reference ?? p.ref ?? p.verseRef ?? "";
+const referenceCap = capitalizeRef(reference);
 
     const version =
       typeof p === "string" ? "" : p.version ?? p.versionOverride ?? "";
 
-    // 1) si es string, buscamos el texto en editedSermon.verses
-    // 2) si es objeto, usamos p.text
-    const text =
-      typeof p === "string"
-        ? (editedSermon.verses || []).find((v: any) => v.ref === p)?.text ?? ""
-        : p.text ?? p.verseText ?? "";
+   // normalizador para evitar problemas de mayúsculas / espacios
+const norm = (s: any) => String(s ?? "").toLowerCase().trim();
 
-    const textToCopy = version
-      ? `${reference} (${version}) — ${text}`
-      : `${reference} — ${text}`;
+// 1) si es string, buscamos el texto en editedSermon.verses (normalizado)
+// 2) si es objeto, usamos p.text
+const found =
+  typeof p === "string"
+    ? (editedSermon.verses || []).find(
+        (v: any) => norm(v.ref) === norm(p)
+      )
+    : p;
+
+const text = (found?.text ?? found?.verseText ?? "").trim();
+
+
+
+   const header = version
+  ? `${referenceCap} (${version})`
+  : referenceCap;
+
+// 👉 NO agrega "—" si no hay texto
+const textToCopy = text ? `${header} — ${text}` : header;
+
 
     try {
       await navigator.clipboard.writeText(textToCopy);
@@ -1431,11 +1462,16 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                   ? p
                   : (p as any).reference ?? getPassageLabel(p);
 
-              const text =
-                typeof p === "string"
-                  ? (editedSermon.verses || []).find((v: any) => v.ref === p)
-                      ?.text ?? ""
-                  : (p as any).text ?? "";
+          const verseObj =
+  typeof p === "string"
+    ? (editedSermon.verses || []).find((v: any) =>
+  v.ref?.toLowerCase().trim() === String(p).toLowerCase().trim()
+)
+
+    : (p as any);
+
+const text = verseObj?.text || verseObj?.verseText || "";
+
 
               const version =
                 typeof p === "string" ? "" : (p as any).version ?? "";
