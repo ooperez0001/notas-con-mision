@@ -87,6 +87,8 @@ const t = (key: keyof (typeof translations)["es"]) =>
     en: ["kjv", "niv"],
     pt: ["arc"],
   };
+  const [showSnippetsHelp, setShowSnippetsHelp] = useState(false);
+
   
  
   // =======================
@@ -1212,6 +1214,15 @@ const applyFormat = (type: "bold" | "italic" | "h1" | "list" | "quote" | "quotes
     }));
   };
 const handleNotesKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  // TAB = autocompletado inteligente (# intro, # texto, etc.)
+if (e.key === "Tab" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+  const didExpand = tryExpandSnippetAtCursor();
+  if (didExpand) {
+    e.preventDefault();
+    return;
+  }
+}
+
   const isCtrl = e.ctrlKey || e.metaKey; // Ctrl (Windows) / Cmd (Mac)
   if (!isCtrl) return;
   
@@ -1220,7 +1231,6 @@ if (isCtrl && e.shiftKey && e.key.toLowerCase() === "h") {
   applyFormat("highlight");
   return;
 }
-
   switch (e.key.toLowerCase()) {
     case "b":
       e.preventDefault();
@@ -1250,6 +1260,54 @@ if (isCtrl && e.shiftKey && e.key.toLowerCase() === "h") {
     default:
       break;
   }
+};
+
+// 👇 AQUÍ VA SNIPPETS
+const SNIPPETS: Record<string, string> = {
+  "# intro": "# Introducción\n\n",
+  "# texto": "# Texto base\n\n",
+  "# puntos": "# Puntos principales\n- \n- \n- \n\n",
+  "# aplicacion": "# Aplicación\n\n",
+  "# conclusion": "# Conclusión\n\n",
+  "# oracion": "# Oración\n\n",
+  "# notas": "# Notas\n\n",
+};
+const tryExpandSnippetAtCursor = () => {
+  const ta = notesRef.current;
+  if (!ta) return false;
+
+  const value = ta.value ?? "";
+  const cursor = ta.selectionStart ?? 0;
+
+  // inicio y fin de la línea actual
+  const lineStart = value.lastIndexOf("\n", cursor - 1) + 1;
+  const lineEnd = value.indexOf("\n", cursor);
+  const end = lineEnd === -1 ? value.length : lineEnd;
+
+  const currentLine = value
+    .slice(lineStart, end)
+    .trim()
+    .toLowerCase();
+
+  const expansion = SNIPPETS[currentLine];
+  if (!expansion) return false;
+
+  const before = value.slice(0, lineStart);
+  const after = value.slice(end);
+
+  const nextValue = `${before}${expansion}${after}`;
+
+  handleNotesChange(
+    { target: { value: nextValue } } as React.ChangeEvent<HTMLTextAreaElement>
+  );
+
+  requestAnimationFrame(() => {
+    ta.focus();
+    const pos = lineStart + expansion.length;
+    ta.setSelectionRange(pos, pos);
+  });
+
+  return true;
 };
 
   // Tipos de formato que vamos a aplicar
@@ -1781,7 +1839,41 @@ title={`${t("fmt_highlight" as any)} (Ctrl+Shift+H)`}
   🖍
 </button>
 
+<button
+  type="button"
+  onClick={() => setShowSnippetsHelp((v) => !v)}
+  className="rounded-md border px-2 py-1 text-xs font-semibold
+             hover:bg-gray-100 dark:hover:bg-gray-800"
+  title={`${t("snippets_help" as any)}`}
+>
+  ?
+</button>
+
+
+
 </div>
+{showSnippetsHelp && (
+  <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm
+                  dark:border-gray-700 dark:bg-gray-900">
+    <div className="mb-2 font-semibold">
+      {t("snippets_title" as any)}
+    </div>
+
+    <ul className="list-disc pl-5 space-y-1">
+      <li><code># intro</code> → {t("snip_intro" as any)}</li>
+      <li><code># texto</code> → {t("snip_texto" as any)}</li>
+      <li><code># puntos</code> → {t("snip_puntos" as any)}</li>
+      <li><code># aplicacion</code> → {t("snip_aplicacion" as any)}</li>
+      <li><code># conclusion</code> → {t("snip_conclusion" as any)}</li>
+      <li><code># oracion</code> → {t("snip_oracion" as any)}</li>
+      <li><code># notas</code> → {t("snip_notas" as any)}</li>
+    </ul>
+
+    <div className="mt-2 text-xs text-gray-500">
+      {t("snippets_tip" as any)}
+    </div>
+  </div>
+)}
 
             <textarea
             ref={notesRef}
