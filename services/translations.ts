@@ -63,6 +63,10 @@ words: "palabras",
 characters: "caracteres",
 clear_notes: "Limpiar notas",
 copy: "Copiar",
+preview_title: "Vista previa",
+preview_empty: "Escribe tus notas arriba… aquí verás la vista previa.",
+notes_edit: "Editar",
+notes_preview: "Vista previa",
 
     
     // Smart Bible
@@ -176,6 +180,11 @@ words: "words",
 characters: "characters",
 clear_notes: "Clear notes",
 copy: "Copy",
+preview_title: "Preview",
+preview_empty: "Write your notes above… the preview will appear here.",
+notes_edit: "Edit",
+notes_preview: "Preview",
+
 
     // Smart Bible
     bible_title: "Smart Bible",
@@ -288,6 +297,10 @@ words: "palavras",
 characters: "caracteres",
 clear_notes: "Limpar notas",
 copy: "Copiar",
+preview_title: "Pré-visualização",
+preview_empty: "Escreva suas notas acima… a pré-visualização aparecerá aqui.",
+notes_edit: "Editar",
+notes_preview: "Pré-visualização",
 
 
 

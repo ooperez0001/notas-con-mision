@@ -59,3 +59,169 @@ Salieron warnings tipo:
 3) Opcional: separar el código del diccionario a un componente/servicio (para mantener SermonEditor más limpio)
 
 ---
+# 📘 Notas con Misión — Estado del Proyecto
+
+## 🧭 Estado general
+- App funcional
+- Diccionario integrado y estable
+- Guardado de sermones correcto
+- Build de producción exitoso
+
+---
+
+## ✅ Funcionalidades confirmadas
+
+### 📖 Versículos
+- Búsqueda por referencia (ej. Mateo 6:31)
+- Soporte para múltiples versiones bíblicas
+- Copiar versículo con referencia
+- Mantener lista abierta (opcional)
+
+### 📝 Notas
+- Editor de texto libre
+- Conteo de palabras
+- Limpieza de notas
+
+### 📚 Diccionario (ESTABLE)
+- Búsqueda de palabras
+- Soporte multilenguaje
+- Integración con:
+  - DictionaryAPI
+  - Wiktionary
+  - Gemini (fallback)
+- Guardar palabras por sermón
+- Eliminar palabras guardadas
+- Persistencia correcta al guardar sermón
+
+---
+
+## 🏗️ Build
+
+- `npm run build` ejecutado correctamente
+- Warning por chunks > 500kb (NO crítico)
+- App no se rompe en producción
+
+---
+
+## 🧬 Git / Control de versiones
+
+- Commits limpios
+- `git stash` usado correctamente
+- Sin conflictos activos
+- Advertencias LF/CRLF normales en Windows
+
+---
+
+## 🔜 Próximos pasos (prioridad)
+
+1. ✨ Markdown enriquecido en notas (bold, italic, listas)
+2. 🧹 Limpieza interna de `SermonEditor.tsx` (sin tocar lógica)
+3. 📦 Separar lógica del diccionario (opcional, futuro)
+4. 🧾 Documentar estructura del proyecto
+
+---
+
+## 🛑 Regla de oro
+> **No tocar lo que ya funciona.**
+
+
+Perfecto amigo 👍
+Aquí tienes un resumen claro, ordenado y listo para que mañana podamos retomar sin confusión en un chat nuevo.
+
+📘 Notas con Misión — Resumen de Avance (Hoy)
+🧭 Contexto general
+
+Hoy se trabajó exclusivamente en el editor de notas dentro de SermonEditor.tsx, con el objetivo de mejorar la experiencia de escritura sin romper la app, evitando librerías incompatibles como ReactQuill.
+
+Decisión clave:
+👉 Mantener un editor Markdown simple, estable y bajo control propio.
+
+✅ Logros principales
+✍️ Editor de notas
+
+Se mantuvo el <textarea> como base (decisión consciente por estabilidad).
+
+Se descartó definitivamente el sistema de preview, por no aportar valor real al flujo.
+
+El editor ahora funciona solo en modo edición, sin vistas duplicadas.
+
+🧰 Barra de herramientas Markdown (custom)
+
+Se implementó una barra superior sencilla, con botones que inyectan sintaxis Markdown directamente en el texto, respetando selección y cursor.
+
+Botones actuales:
+
+* → Negrita (**texto**)
+
+/ → Inserta barra inclinada / (acción personalizada, no itálica)
+
+# → Título (# texto)
+
+- → Lista (- texto)
+
+" → Cita (> texto)
+
+🖍 (highlight) → Resaltado (==texto==)
+
+📌 Todo esto se hace sin librerías externas y sin romper traducciones ni estado.
+
+⚙️ Lógica técnica implementada
+
+Función central applyFormat(type) ampliada con nuevos tipos (slash, highlight, etc.).
+
+Uso correcto de:
+
+selectionStart / selectionEnd
+
+Reposicionamiento del cursor con requestAnimationFrame
+
+Soporte para:
+
+Texto seleccionado
+
+Cursor sin selección
+
+Líneas completas (en prefijos como #, -, >)
+
+🌍 Internacionalización
+
+Se respetó el sistema existente de traducciones t("key").
+
+No se rompieron keys ni flujo de idiomas (ES / EN / PT).
+
+🧹 Limpieza y estabilidad
+
+Se eliminó código muerto relacionado con preview.
+
+Se corrigió un warning en package.json:
+
+Se quitó la tilde del campo "name" (requerimiento de npm).
+
+La app sigue compilando y funcionando (aunque Vite muestre warnings de hot reload).
+
+🧠 Decisiones importantes tomadas hoy
+
+❌ No usar ReactQuill (incompatibilidad con React 18/19).
+
+❌ No forzar WYSIWYG falso.
+
+✅ Priorizar estabilidad + control sobre apariencia.
+
+✅ Aceptar un editor simple pero profesional y confiable.
+
+🔜 Próximos pasos sugeridos (NO hechos aún)
+
+Atajos de teclado (Ctrl+B, Ctrl+/, etc.)
+
+Mejorar solo el look visual de la barra (Tailwind).
+
+Exportar notas (texto limpio / PDF).
+
+Documentar el editor en PROJECT_STATUS_NOTAS_CON_MISION.md.
+
+🟢 Estado actual
+
+✔ Código estable
+✔ Funcionalidad completa
+✔ Listo para commit
+✔ Buen punto para pausar y retomar mañana

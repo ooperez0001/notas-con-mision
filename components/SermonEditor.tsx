@@ -7,6 +7,7 @@ import { summarizeSermon } from "../services/geminiService";
 import { translations, getTranslation } from "../services/translations";
 import { defineWordEs } from "../services/geminiService";
 
+
 interface SermonEditorProps {
   sermon: Sermon;
   setSelectedSermon: (sermon: Sermon | null) => void;
@@ -87,7 +88,7 @@ const t = (key: keyof (typeof translations)["es"]) =>
     pt: ["arc"],
   };
   
-
+ 
   // =======================
   // Diccionario por sermón
   // =======================
@@ -1114,6 +1115,94 @@ const textToCopy = text ? `${header} — ${text}` : header;
   // Referencia al textarea para poder saber qué texto está seleccionado
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
+const applyFormat = (type: "bold" | "italic" | "h1" | "list" | "quote" | "quotes" | "slash"| "highlight") => {
+
+
+
+  const ta = notesRef.current;
+  if (!ta) return;
+
+  const value = ta.value ?? "";
+  const start = ta.selectionStart ?? 0;
+  const end = ta.selectionEnd ?? 0;
+
+  const selected = value.slice(start, end);
+  const before = value.slice(0, start);
+  const after = value.slice(end);
+
+  const wrap = (left: string, right = left) => {
+    const insert = `${left}${selected || ""}${right}`;
+    const nextValue = `${before}${insert}${after}`;
+
+    // actualiza estado usando tu handler existente
+    handleNotesChange({
+      target: { value: nextValue },
+    } as React.ChangeEvent<HTMLTextAreaElement>);
+
+    // volver foco + posicionar cursor
+    requestAnimationFrame(() => {
+      ta.focus();
+      if (selected) {
+        ta.setSelectionRange(start + left.length, end + left.length);
+      } else {
+        // si no había selección, coloca cursor en medio
+        const pos = start + left.length;
+        ta.setSelectionRange(pos, pos);
+      }
+    });
+  };
+
+  const prefixLines = (prefix: string) => {
+    const block = selected || "";
+    const lines = block.length ? block.split("\n") : [""];
+    const withPrefix = lines.map((l) => `${prefix}${l}`).join("\n");
+
+    const insert = withPrefix;
+    const nextValue = `${before}${insert}${after}`;
+
+    handleNotesChange({
+      target: { value: nextValue },
+    } as React.ChangeEvent<HTMLTextAreaElement>);
+
+    requestAnimationFrame(() => {
+      ta.focus();
+      const newStart = start;
+      const newEnd = start + insert.length;
+      ta.setSelectionRange(newStart, newEnd);
+    });
+  };
+
+  switch (type) {
+    case "bold":
+      wrap("**");
+      break;
+    case "italic":
+      wrap("*");
+      break;
+    case "h1":
+      prefixLines("# ");
+      break;
+    case "list":
+      prefixLines("- ");
+      break;
+    case "quote":
+      prefixLines("> ");
+      break;
+      case "quotes":
+  wrap("“", "”");
+  break;
+  case "slash":
+  wrap("/");
+  break;
+  case "highlight":
+  wrap("==", "==");
+  break;
+
+
+
+  }
+};
+
   // Cuando cambian las notas
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -1552,11 +1641,77 @@ const text = verseObj?.text || verseObj?.verseText || "";
 
           {/* Editor de notas sencillo */}
           <div className="mt-4">
-            <label className="block text-sm font-semibold mb-1">
-              {t("notes_title")}
-            </label>
+       <label className="block text-sm font-semibold mb-1">
+  {t("notes_title")}
+</label>
+
+
+<div className="mb-2 flex flex-wrap gap-2">
+  <button
+    type="button"
+    onClick={() => applyFormat("bold")}
+    className="rounded border px-2 py-1 text-xs font-semibold hover:bg-gray-100 dark:hover:bg-gray-800"
+    title={t("fmt_bold" as any)}
+
+  >
+    *
+  </button>
+
+  <button
+  type="button"
+  onClick={() => applyFormat("slash")}
+
+  className="rounded border px-2 py-1 text-xs italic hover:bg-gray-100 dark:hover:bg-gray-800"
+>
+  /
+</button>
+
+
+  <button
+    type="button"
+    onClick={() => applyFormat("h1")}
+    className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium shadow-sm hover:bg-gray-50 active:scale-[0.98] dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800"
+
+    title={t("fmt_bold" as any)}
+
+  >
+    #
+  </button>
+
+  <button
+    type="button"
+    onClick={() => applyFormat("list")}
+   className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium shadow-sm hover:bg-gray-50 active:scale-[0.98] dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800"
+
+    title={t("fmt_bold" as any)}
+
+  >
+    -
+  </button>
+
+  <button
+    type="button"
+    onClick={() => applyFormat("quotes")}
+    className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium shadow-sm hover:bg-gray-50 active:scale-[0.98] dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800"
+
+    title={t("fmt_bold" as any)}
+
+  >
+    ❝
+  </button>
+  <button
+  type="button"
+  onClick={() => applyFormat("highlight")}
+  className="rounded border px-2 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-800"
+>
+  🖍
+</button>
+
+</div>
+
 
             <textarea
+            ref={notesRef}
               className="w-full min-h-[220px] rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm
                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
                        dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 dark:focus:ring-blue-400
@@ -1565,6 +1720,10 @@ const text = verseObj?.text || verseObj?.verseText || "";
               onChange={handleNotesChange}
               placeholder={t("notes_placeholder")}
             />
+            
+
+
+
 
             {/* Contador de palabras / caracteres + limpiar */}
             <div className="mt-1 flex justify-between text-xs text-gray-400">
