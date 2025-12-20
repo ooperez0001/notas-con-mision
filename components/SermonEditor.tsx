@@ -1641,16 +1641,22 @@ const text = verseObj?.text || verseObj?.verseText || "";
 
           {/* Editor de notas sencillo */}
           <div className="mt-4">
-       <label className="block text-sm font-semibold mb-1">
+     <label className="block text-base font-semibold mb-2 text-gray-900">
   {t("notes_title")}
 </label>
 
 
-<div className="mb-2 flex flex-wrap gap-2">
+
+<div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+
   <button
     type="button"
     onClick={() => applyFormat("bold")}
-    className="rounded border px-2 py-1 text-xs font-semibold hover:bg-gray-100 dark:hover:bg-gray-800"
+    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-900
+           hover:bg-gray-100 active:scale-[0.98]
+           focus:outline-none focus:ring-2 focus:ring-blue-500
+           dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+
     title={t("fmt_bold" as any)}
 
   >
@@ -1661,18 +1667,27 @@ const text = verseObj?.text || verseObj?.verseText || "";
   type="button"
   onClick={() => applyFormat("slash")}
 
-  className="rounded border px-2 py-1 text-xs italic hover:bg-gray-100 dark:hover:bg-gray-800"
+  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-900
+           hover:bg-gray-100 active:scale-[0.98]
+           focus:outline-none focus:ring-2 focus:ring-blue-500
+           dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+title={t("fmt_slash" as any)}
 >
   /
 </button>
 
+<div className="mx-1 h-6 w-px bg-gray-200 dark:bg-gray-700" />
 
   <button
     type="button"
     onClick={() => applyFormat("h1")}
-    className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium shadow-sm hover:bg-gray-50 active:scale-[0.98] dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800"
+    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-900
+           hover:bg-gray-100 active:scale-[0.98]
+           focus:outline-none focus:ring-2 focus:ring-blue-500
+           dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
 
-    title={t("fmt_bold" as any)}
+
+    title={t("fmt_h1" as any)}
 
   >
     #
@@ -1681,20 +1696,29 @@ const text = verseObj?.text || verseObj?.verseText || "";
   <button
     type="button"
     onClick={() => applyFormat("list")}
-   className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium shadow-sm hover:bg-gray-50 active:scale-[0.98] dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800"
+   className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-900
+           hover:bg-gray-100 active:scale-[0.98]
+           focus:outline-none focus:ring-2 focus:ring-blue-500
+           dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
 
-    title={t("fmt_bold" as any)}
+
+    title={t("fmt_list" as any)}
 
   >
     -
   </button>
+<div className="mx-1 h-6 w-px bg-gray-200 dark:bg-gray-700" />
 
   <button
     type="button"
     onClick={() => applyFormat("quotes")}
-    className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium shadow-sm hover:bg-gray-50 active:scale-[0.98] dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800"
+    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-900
+           hover:bg-gray-100 active:scale-[0.98]
+           focus:outline-none focus:ring-2 focus:ring-blue-500
+           dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
 
-    title={t("fmt_bold" as any)}
+
+    title={t("fmt_quote" as any)}
 
   >
     ❝
@@ -1702,13 +1726,16 @@ const text = verseObj?.text || verseObj?.verseText || "";
   <button
   type="button"
   onClick={() => applyFormat("highlight")}
-  className="rounded border px-2 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-800"
+  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-yellow-200 bg-yellow-50 text-sm font-semibold text-yellow-800
+           hover:bg-yellow-100 active:scale-[0.98]
+           focus:outline-none focus:ring-2 focus:ring-blue-500
+           dark:border-yellow-900/50 dark:bg-yellow-900/20 dark:text-yellow-200 dark:hover:bg-yellow-900/30"
+title={t("fmt_highlight" as any)}
 >
   🖍
 </button>
 
 </div>
-
 
             <textarea
             ref={notesRef}
@@ -1719,10 +1746,7 @@ const text = verseObj?.text || verseObj?.verseText || "";
               value={editedSermon.notes || ""}
               onChange={handleNotesChange}
               placeholder={t("notes_placeholder")}
-            />
-            
-
-
+            />       
 
 
             {/* Contador de palabras / caracteres + limpiar */}
