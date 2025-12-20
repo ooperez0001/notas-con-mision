@@ -1211,6 +1211,46 @@ const applyFormat = (type: "bold" | "italic" | "h1" | "list" | "quote" | "quotes
       notes: value,
     }));
   };
+const handleNotesKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const isCtrl = e.ctrlKey || e.metaKey; // Ctrl (Windows) / Cmd (Mac)
+  if (!isCtrl) return;
+  
+if (isCtrl && e.shiftKey && e.key.toLowerCase() === "h") {
+  e.preventDefault();
+  applyFormat("highlight");
+  return;
+}
+
+  switch (e.key.toLowerCase()) {
+    case "b":
+      e.preventDefault();
+      applyFormat("bold");
+      break;
+
+    case "/":
+      e.preventDefault();
+      applyFormat("slash");
+      break;
+
+    case "h":
+      e.preventDefault();
+      applyFormat("h1");
+      break;
+
+    case "l":
+      e.preventDefault();
+      applyFormat("list");
+      break;
+
+    case "q":
+      e.preventDefault();
+      applyFormat("quote");
+      break;
+
+    default:
+      break;
+  }
+};
 
   // Tipos de formato que vamos a aplicar
   type NoteFormat = "bold" | "italic";
@@ -1657,7 +1697,8 @@ const text = verseObj?.text || verseObj?.verseText || "";
            focus:outline-none focus:ring-2 focus:ring-blue-500
            dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
 
-    title={t("fmt_bold" as any)}
+    title={`${t("fmt_bold" as any)} (Ctrl+B)`}
+
 
   >
     *
@@ -1671,7 +1712,8 @@ const text = verseObj?.text || verseObj?.verseText || "";
            hover:bg-gray-100 active:scale-[0.98]
            focus:outline-none focus:ring-2 focus:ring-blue-500
            dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
-title={t("fmt_slash" as any)}
+title={`${t("fmt_slash" as any)} (Ctrl+/)`}
+
 >
   /
 </button>
@@ -1687,7 +1729,8 @@ title={t("fmt_slash" as any)}
            dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
 
 
-    title={t("fmt_h1" as any)}
+    title={`${t("fmt_h1" as any)} (Ctrl+H)`}
+
 
   >
     #
@@ -1702,7 +1745,8 @@ title={t("fmt_slash" as any)}
            dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
 
 
-    title={t("fmt_list" as any)}
+    title={`${t("fmt_list" as any)} (Ctrl+L)`}
+
 
   >
     -
@@ -1718,7 +1762,8 @@ title={t("fmt_slash" as any)}
            dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
 
 
-    title={t("fmt_quote" as any)}
+    title={`${t("fmt_quote" as any)} (Ctrl+Q)`}
+
 
   >
     ❝
@@ -1730,7 +1775,8 @@ title={t("fmt_slash" as any)}
            hover:bg-yellow-100 active:scale-[0.98]
            focus:outline-none focus:ring-2 focus:ring-blue-500
            dark:border-yellow-900/50 dark:bg-yellow-900/20 dark:text-yellow-200 dark:hover:bg-yellow-900/30"
-title={t("fmt_highlight" as any)}
+title={`${t("fmt_highlight" as any)} (Ctrl+Shift+H)`}
+
 >
   🖍
 </button>
@@ -1745,6 +1791,7 @@ title={t("fmt_highlight" as any)}
                        resize-none"
               value={editedSermon.notes || ""}
               onChange={handleNotesChange}
+              onKeyDown={handleNotesKeyDown}
               placeholder={t("notes_placeholder")}
             />       
 

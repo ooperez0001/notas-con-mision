@@ -67,6 +67,13 @@ preview_title: "Vista previa",
 preview_empty: "Escribe tus notas arriba… aquí verás la vista previa.",
 notes_edit: "Editar",
 notes_preview: "Vista previa",
+// Toolbar Markdown
+fmt_bold: "Negrita",
+fmt_slash: "Barra inclinada",
+fmt_h1: "Título",
+fmt_list: "Lista",
+fmt_quote: "Cita",
+fmt_highlight: "Resaltado",
 
     
     // Smart Bible
@@ -184,6 +191,13 @@ preview_title: "Preview",
 preview_empty: "Write your notes above… the preview will appear here.",
 notes_edit: "Edit",
 notes_preview: "Preview",
+// Markdown Toolbar
+fmt_bold: "Bold",
+fmt_slash: "Slash",
+fmt_h1: "Heading",
+fmt_list: "List",
+fmt_quote: "Quote",
+fmt_highlight: "Highlight",
 
 
     // Smart Bible
@@ -301,6 +315,13 @@ preview_title: "Pré-visualização",
 preview_empty: "Escreva suas notas acima… a pré-visualização aparecerá aqui.",
 notes_edit: "Editar",
 notes_preview: "Pré-visualização",
+// Barra Markdown
+fmt_bold: "Negrito",
+fmt_slash: "Barra inclinada",
+fmt_h1: "Título",
+fmt_list: "Lista",
+fmt_quote: "Citação",
+fmt_highlight: "Destaque",
 
 
 
