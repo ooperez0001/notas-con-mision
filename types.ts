@@ -24,6 +24,11 @@ export interface SavedVerse {
   versionOverride?: string;
 }
 
+export interface SavedWord {
+  term: string;
+  definition: string;
+  createdAt: string;
+}
 
 export interface Sermon {
   id: string;
@@ -33,6 +38,10 @@ export interface Sermon {
   verses: SavedVerse[];
   notes: string;
   definitions: { [key: string]: string };
+    // ✅ Diccionario guardado por sermón (opcional para compatibilidad)
+  
+  dictionary?: SavedWord[];
+
 }
 
 export interface PersonalNote {
@@ -51,6 +60,8 @@ export interface UserProfile {
 
 export type TabId = 'home' | 'sermons' | 'bible' | 'notes' | 'settings';
 export type Language = 'es' | 'en' | 'pt';
+export type AppLanguage = "es" | "en" | "pt";
+
 
 export interface KeywordResult {
   ref: string;

@@ -1,19 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  Sermon,
-  BibleSearchResult,
-  BibleVerse,
-  SavedVerse,
-  UserProfile,
-  Language,
-} from "../types";
+import { Sermon, BibleSearchResult, BibleVerse, SavedVerse, UserProfile, Language,} from "../types";
 import { Modal } from "./Modal";
 import { BibleDictionary } from "./BibleDictionary";
-import {
-  fetchVerseFromAPI,
-  searchByKeyword,
-  getVersionsByLanguage,
-} from "../services/bibleService";
+import { fetchVerseFromAPI, searchByKeyword, getVersionsByLanguage, } from "../services/bibleService";
 import { summarizeSermon } from "../services/geminiService";
 import { translations, getTranslation } from "../services/translations";
 import { defineWordEs } from "../services/geminiService";
@@ -27,12 +16,15 @@ interface SermonEditorProps {
   language: Language;
   preferredVersion: string;
 }
+
 type KeyPassage = {
   id: string;
   reference: string;
   version: string;
   text: string;
+  verses?: BibleVerse[]; // ✅ ahora sí existe (opcional)
 };
+
 
 type KeyPassageOption = {
   id: string;
@@ -68,8 +60,10 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
   const [isSummarizing, setIsSummarizing] = useState(false);
   const notesRef = useRef<HTMLTextAreaElement>(null);
   const suggestionsTimerRef = useRef<number | null>(null);
-  const t = (key: keyof (typeof translations)["es"]) =>
-    getTranslation(language, key);
+const t = (key: keyof (typeof translations)["es"]) =>
+  getTranslation(language as import("../types").Language, key);
+
+
   const [sermonTitle, setSermonTitle] = useState("");
   const [preacherName, setPreacherName] = useState("");
   const [keyPassages, setKeyPassages] = useState<KeyPassage[]>([]);
@@ -92,6 +86,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
     en: ["kjv", "niv"],
     pt: ["arc"],
   };
+  
 
   // =======================
   // Diccionario por sermón
@@ -113,7 +108,8 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
   const [isDictOpen, setIsDictOpen] = useState(false);
   const [dictQuery, setDictQuery] = useState("");
   const [dictResults, setDictResults] = useState<{
-    source: "dictionaryapi" | "wiktionary";
+    source: "dictionaryapi" | "wiktionary" | "gemini";
+
     word: string;
     lang?: string;
     definitions: string[];
@@ -122,9 +118,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
   const [dictLoading, setDictLoading] = useState(false);
   const [dictError, setDictError] = useState<string | null>(null);
 
-  const [savedWords, setSavedWords] = useState<SavedWord[]>(
-    editedSermon?.dictionary ?? []
-  );
+  const [savedWords, setSavedWords] = useState<SavedWord[]>([]);
 
   // Helper: etiqueta bonita para mostrar
   const getPassageLabel = (p: any) =>
@@ -159,9 +153,12 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
     }
   }, []);
 
-  useEffect(() => {
-    setSavedWords(editedSermon?.dictionary ?? []);
-  }, [editedSermon?.id]);
+useEffect(() => {
+  const dict = (editedSermon as any)?.dictionary;
+  setSavedWords(Array.isArray(dict) ? dict : []);
+}, [editedSermon?.id]);
+
+
 
   const handleAddVerse = (version: string, verses: BibleVerse[]) => {
     const fullText = verses.map((v) => v.text).join(" ");
@@ -281,6 +278,7 @@ version: v?.version ?? v?.versionOverride ?? "",
         .filter(Boolean),
 
       dictionary: savedWords,
+      definitions: editedSermon.definitions ?? {},
     };
 
     setSermons((prevSermons) => {
@@ -589,11 +587,12 @@ version: v?.version ?? v?.versionOverride ?? "",
 
       // Priorizamos según idioma de la app, pero leyendo desde en.wiktionary
       const preferredLangs =
-        language === "es"
-          ? ["Spanish", "Portuguese", "English"]
-          : language === "pt"
-          ? ["Portuguese", "Spanish", "English"]
-          : ["English", "Spanish", "Portuguese"];
+  (language as Language) === "es"
+    ? ["Spanish", "Portuguese", "English"]
+    : (language as Language) === "pt"
+    ? ["Portuguese", "Spanish", "English"]
+    : ["English", "Spanish", "Portuguese"];
+
 
       let pickedLang: string | null = null;
 
@@ -610,12 +609,11 @@ version: v?.version ?? v?.versionOverride ?? "",
         return;
       }
 
-      const langsToTry =
-        language === "es"
-          ? ["es", "pt", "en"]
-          : language === "pt"
-          ? ["pt", "es", "en"]
-          : ["en", "es", "pt"];
+ const langsToTry =
+  (language as Language) === "es" ? ["es","pt","en"]
+  : (language as Language) === "pt" ? ["pt","es","en"]
+  : ["en","es","pt"];
+
 
       const extractDefs = (langName: string, allowJunk: boolean) => {
         const entries = wdata?.[langName] || [];
