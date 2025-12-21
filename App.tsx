@@ -8,6 +8,8 @@ import { BottomNav } from './components/BottomNav';
 import { LoginScreen } from './components/LoginScreen';
 import { PremiumModal } from './components/PremiumModal';
 import { TabId, Sermon, PersonalNote, UserProfile, Language } from './types';
+import { normalizeToLocalYMD } from "./services/dateUtils";
+
 
 // Mock Data Definitions
 const MOCK_DATA = {
@@ -94,7 +96,27 @@ const App: React.FC = () => {
   const [sermons, setSermons] = useState<Sermon[]>(() => {
     if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('sermons');
-        return saved ? JSON.parse(saved) : MOCK_DATA[language].sermons;
+        if (!saved) return MOCK_DATA[language].sermons;
+
+try {
+  const parsed = JSON.parse(saved);
+  const list = Array.isArray(parsed) ? parsed : [];
+
+  const normalized = list.map((s: any) => ({
+    ...s,
+    date: normalizeToLocalYMD(s?.date),
+  }));
+
+  // opcional recomendado: re-guardar ya normalizado
+  try {
+    localStorage.setItem("sermons", JSON.stringify(normalized));
+  } catch {}
+
+  return normalized as Sermon[];
+} catch {
+  return MOCK_DATA[language].sermons;
+}
+
     }
     return MOCK_DATA['es'].sermons;
   });
