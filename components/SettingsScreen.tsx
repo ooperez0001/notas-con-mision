@@ -235,7 +235,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
                 {/* Data Management */}
                 <section>
-                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider mb-3 ml-2">{t.section_account}</h3>
+                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider mb-3 ml-2"> {t.section_account} </h3>
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
                         
                          {/* Premium Management in Menu */}

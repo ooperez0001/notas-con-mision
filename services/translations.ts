@@ -501,6 +501,7 @@ term_definition_label: "Definição",
     premium_banner_title: "Seja Premium",
     premium_banner_desc: "Desbloqueie IA ilimitada e mais.",
     view_plans: "Ver Planos",
+    
 
     // Premium Modal
     premium_modal_title: "Notas com Missão PRO",

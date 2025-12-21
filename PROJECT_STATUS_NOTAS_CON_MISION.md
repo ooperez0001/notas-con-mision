@@ -225,3 +225,54 @@ Documentar el editor en PROJECT_STATUS_NOTAS_CON_MISION.md.
 ✔ Funcionalidad completa
 ✔ Listo para commit
 ✔ Buen punto para pausar y retomar mañana
+
+---
+
+## 🧾 Convenciones oficiales del proyecto (IMPORTANTE)
+
+### ✅ REGLA 1 — Fechas (sin desfase por zona horaria)
+**Objetivo:** evitar que la fecha cambie sola por la noche (Louisiana) y que “Nuevo sermón”, “Mis sermones”, exportación y PDF siempre coincidan.
+
+**Regla de oro:**
+- ✅ Todas las fechas de UI se manejan como **string local** `YYYY-MM-DD`
+- ❌ Nunca usar UTC para fechas visibles
+
+**Fuente única de verdad (services/dateUtils.ts):**
+- `getLocalYMD()` → devuelve “hoy” en formato `YYYY-MM-DD` local
+- `normalizeToLocalYMD(x)` → normaliza (ISO/Date/string) a `YYYY-MM-DD` local
+- `formatYMDForUI(ymd, locale)` → solo para mostrar bonito sin desfase
+
+**Permitido ✅**
+- `date: getLocalYMD()`
+- `date: normalizeToLocalYMD(savedDate)`
+- `formatYMDForUI(note.date, "es-US")`
+
+**Prohibido 🚫 (causa el bug del desfase)**
+- `new Date().toISOString()`
+- `toISOString().slice(0, 10)`
+- `new Date("YYYY-MM-DD")` para mostrar (puede interpretarse mal)
+
+**Inputs `<input type="date">`**
+- `value` debe ser siempre `YYYY-MM-DD`
+- `onChange` debe guardar `e.target.value`
+
+Ejemplo correcto:
+```tsx
+<input
+  type="date"
+  value={normalizeToLocalYMD(item.date)}
+  onChange={(e) => setItem(prev => ({ ...prev, date: e.target.value }))}
+ />
+### ✅ REGLA 3 — Traducciones (t como FUNCIÓN, no objeto)
+
+**Objetivo:** evitar textos sin traducir y no buscar palabra por palabra después.
+
+**Regla oficial:**
+- ✅ `t` es una FUNCIÓN → `t("clave")`
+- ❌ No usar `t.clave`
+
+**Implementación estándar en componentes:**
+```ts
+const t = (key: string) => getTranslation(language, key);
+
+

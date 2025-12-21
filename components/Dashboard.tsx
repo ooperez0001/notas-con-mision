@@ -110,7 +110,7 @@ const t = (key: keyof typeof translations["es"]) => getTranslation(language, key
 
     {/* Fecha */}
     <span className="mt-3 inline-flex items-center text-xs text-gray-400 transition-colors group-hover:text-blue-500 dark:group-hover:text-blue-300">
-    formatYMDForUI(latestSermon.date, language === "en" ? "en-US" : language === "pt" ? "pt-BR" : "es-US")
+    {formatYMDForUI(latestSermon.date, language === "en" ? "en-US" : language === "pt" ? "pt-BR" : "es-US")}
 
     </span>
   </div>
