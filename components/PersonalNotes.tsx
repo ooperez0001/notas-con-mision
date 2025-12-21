@@ -3,6 +3,8 @@ import { PlusCircle, Search, Trash2, Save } from 'lucide-react';
 import { PersonalNote, Language } from '../types';
 import { Modal } from './Modal';
 import { translations } from '../services/translations';
+import { getLocalYMD } from "../services/dateUtils"; // ajusta ruta
+import { formatYMDForUI } from "../services/dateUtils";
 
 interface PersonalNotesProps {
   personalNotes: PersonalNote[];
@@ -22,10 +24,18 @@ export const PersonalNotes: React.FC<PersonalNotesProps> = ({ personalNotes, set
     return <NoteEditor note={selectedNote} setSelectedNote={setSelectedNote} setPersonalNotes={setPersonalNotes} language={language} />;
   }
 
-  const handleAddNewNote = () => {
-    const newNote: PersonalNote = { id: `note${Date.now()}`, title: '', content: '', date: new Date().toISOString().split('T')[0] };
-    setSelectedNote(newNote);
+ const handleAddNewNote = () => {
+  const newNote: PersonalNote = {
+    id: String(Date.now()),
+    title: "",
+    content: "",
+    date: getLocalYMD(),
   };
+
+  setPersonalNotes((prev) => [newNote, ...prev]);
+  setSelectedNote(newNote);
+};
+
 
   const filteredNotes = personalNotes.filter(note => 
     normalizeText(note.title).includes(normalizeText(searchQuery)) || 
@@ -59,7 +69,8 @@ export const PersonalNotes: React.FC<PersonalNotesProps> = ({ personalNotes, set
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-3 leading-relaxed">{note.content || "..."}</p>
             </div>
-            <p className="text-xs text-gray-400 font-medium">{new Date(note.date).toLocaleDateString(language === 'en' ? 'en-US' : language === 'pt' ? 'pt-BR' : 'es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            <p className="text-xs text-gray-400 font-medium">formatYMDForUI(note.date, language === "en" ? "en-US" : language === "pt" ? "pt-BR" : "es-US")
+ </p>
           </div>
         ))}
       </div>
@@ -67,7 +78,18 @@ export const PersonalNotes: React.FC<PersonalNotesProps> = ({ personalNotes, set
   );
 };
 
-const NoteEditor: React.FC<{ note: PersonalNote, setSelectedNote: (n: PersonalNote | null) => void, setPersonalNotes: React.Dispatch<React.SetStateAction<PersonalNote[]>>, language: Language }> = ({ note, setSelectedNote, setPersonalNotes, language }) => {
+function NoteEditor({
+  note,
+  setSelectedNote,
+  setPersonalNotes,
+  language,
+}: {
+  note: PersonalNote;
+  setSelectedNote: (note: PersonalNote | null) => void;
+  setPersonalNotes: React.Dispatch<React.SetStateAction<PersonalNote[]>>;
+  language: Language;
+}) {
+
   const [editedNote, setEditedNote] = useState(note);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const t = translations[language];

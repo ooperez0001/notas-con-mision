@@ -5,6 +5,7 @@ import { Sermon, TabId, UserProfile, Language } from '../types';
 import { generateDevotional } from '../services/geminiService';
 import { getVerseOfTheDay, getVersionsByLanguage } from '../services/bibleService';
 import { translations, getTranslation } from "../services/translations";
+import { formatYMDForUI } from "../services/dateUtils";
 
 
 interface DashboardProps {
@@ -109,10 +110,8 @@ const t = (key: keyof typeof translations["es"]) => getTranslation(language, key
 
     {/* Fecha */}
     <span className="mt-3 inline-flex items-center text-xs text-gray-400 transition-colors group-hover:text-blue-500 dark:group-hover:text-blue-300">
-      {new Date(latestSermon.date).toLocaleDateString(
-        language === 'en' ? 'en-US' : language === 'pt' ? 'pt-BR' : 'es-ES',
-        { year: 'numeric', month: 'short', day: 'numeric' }
-      )}
+    formatYMDForUI(latestSermon.date, language === "en" ? "en-US" : language === "pt" ? "pt-BR" : "es-US")
+
     </span>
   </div>
 )}

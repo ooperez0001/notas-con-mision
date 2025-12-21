@@ -6,6 +6,8 @@ import { fetchVerseFromAPI, searchByKeyword, getVersionsByLanguage, } from "../s
 import { summarizeSermon } from "../services/geminiService";
 import { translations, getTranslation } from "../services/translations";
 import { defineWordEs } from "../services/geminiService";
+import { getLocalYMD, normalizeToLocalYMD, formatYMDForUI } from "../services/dateUtils";
+
 
 
 interface SermonEditorProps {
@@ -713,7 +715,8 @@ version: v?.version ?? v?.versionOverride ?? "",
         {
           term,
           definition,
-          createdAt: new Date().toISOString(),
+          createdAt: getLocalYMD(),
+
         },
       ];
     });
@@ -1418,7 +1421,13 @@ const tryExpandSnippetAtCursor = () => {
 
   const title = escapeHtml((editedSermon.title ?? "").trim() || "Sermón");
   const preacher = escapeHtml((editedSermon.preacher ?? "").trim());
-  const date = escapeHtml(String(editedSermon.date ?? "").slice(0, 10));
+  const date = escapeHtml(
+  formatYMDForUI(
+    normalizeToLocalYMD(editedSermon.date),
+    language === "en" ? "en-US" : language === "pt" ? "pt-BR" : "es-US"
+  )
+);
+
   const notes = escapeHtml(String(editedSermon.notes ?? ""));
 
 const passagesHtml =
@@ -1621,7 +1630,8 @@ ${termsHtml}
           {/* Fecha */}
           <input
             type="date"
-            value={(editedSermon.date ?? "").slice(0, 10)}
+            value={normalizeToLocalYMD(editedSermon.date)}
+
             onChange={(e) =>
               setEditedSermon((prev) => ({ ...prev, date: e.target.value }))
             }

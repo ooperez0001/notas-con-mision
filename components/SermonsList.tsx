@@ -3,6 +3,7 @@ import { PlusCircle, Search } from 'lucide-react';
 import { Sermon, UserProfile, Language } from '../types';
 import { SermonEditor } from './SermonEditor';
 import { translations, getTranslation } from "../services/translations";
+import { getLocalYMD } from "../services/dateUtils";
 
 
 interface SermonsListProps {
@@ -70,7 +71,8 @@ export const SermonsList: React.FC<SermonsListProps> = ({ sermons, setSermons, u
         id: `sermon${Date.now()}`, 
         title: '', 
         preacher: '', 
-        date: new Date().toISOString().split('T')[0], 
+        date: getLocalYMD(),
+
         verses: [], 
         notes: '', 
         definitions: {} 

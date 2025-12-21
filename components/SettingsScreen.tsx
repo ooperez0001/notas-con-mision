@@ -3,6 +3,7 @@ import { User, Moon, Sun, Type, Download, Trash2, Bell, Globe, Shield, LogOut, C
 import { Sermon, PersonalNote, UserProfile, Language } from '../types';
 import { getVersionsByLanguage } from '../services/bibleService';
 import { translations } from '../services/translations';
+import { getLocalYMD } from "../services/dateUtils";
 
 interface SettingsScreenProps {
   sermons: Sermon[];
@@ -58,7 +59,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         const data = {
             app: "Notas con Misión",
             version: "1.0",
-            exportedAt: new Date().toISOString(),
+           exportedAt: getLocalYMD(),
+
             user: user.email,
             sermons,
             personalNotes
@@ -68,7 +70,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `backup_${user.name.replace(/\s+/g, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}.txt`;
+        a.download = `backup_${user.name.replace(/\s+/g, '_').toLowerCase()}_${getLocalYMD()}.txt`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
