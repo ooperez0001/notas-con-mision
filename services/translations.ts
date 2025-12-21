@@ -50,11 +50,39 @@ export const translations = {
     defined_terms: "Términos Definidos",
     dictionary_btn: "Diccionario",
     dictionary_placeholder: "Ej: Gracia, Expiación...",
+    // Dictionary
+dictionary_title: "Diccionario",
+
+dictionary_search: "Buscar",
+dictionary_save: "Guardar palabra",
+dictionary_saved_words: "Palabras guardadas",
+dictionary_no_words: "Aún no has guardado palabras.",
+dictionary_loading: "Buscando definición...",
+dictionary_error: "No se pudo obtener la definición.",
+dictionary_source: "Fuente",
+dictionary_type: "Tipo",
+dictionary_definition: "Definición",
+dictionary_example: "Ejemplo",
+dictionary_delete: "Eliminar",
+close: "Cerrar",
+
+
+
+search: "Buscar",
+searching: "Buscando...",
+save_word: "Guardar palabra",
+saved_words: "Palabras guardadas",
+no_saved_words: "Aún no has guardado palabras.",
+language_label: "Idioma",
+spanish: "Español",
+english: "Inglés",
+
+
     summarize_btn: "Resumir con IA",   
     notes_placeholder: "Escribe tus notas aquí... No hay límite de espacio.",
    
     keep_list_open: "Mantener lista abierta",
-searching: "Buscando...",
+
 multi_mode_active: "Modo múltiple activo",
 tip_keep_open_on: "Tip: haz clic en varios versículos sin cerrar la lista.",
 tip_keep_open_off: "Tip: desactívalo si solo quieres añadir un versículo y cerrar la lista.",
@@ -84,6 +112,18 @@ snip_aplicacion: "Aplicación",
 snip_conclusion: "Conclusión",
 snip_oracion: "Oración",
 snip_notas: "Notas",
+// formato PDF
+export_pdf: "Exportar PDF",
+preacher: "Predicador",
+date: "Fecha",
+my_notes: "Mis Notas",
+defined_terms_title: "Términos Definidos",
+no_defined_terms: "No hay términos definidos.",
+term_definition_label: "Definición",
+
+
+
+
 
     
     // Smart Bible
@@ -186,10 +226,36 @@ snip_notas: "Notas",
     defined_terms: "Defined Terms",
     dictionary_btn: "Dictionary",
     dictionary_placeholder: "Ex: Grace, Atonement...",
+    // Dictionary
+dictionary_title: "Dictionary", 
+close: "Close",
+
+
+search: "Search",
+searching: "Searching...",
+save_word: "Save word",
+saved_words: "Saved words",
+no_saved_words: "You haven’t saved any words yet.",
+language_label: "Language",
+spanish: "Spanish",
+english: "English",
+
+dictionary_search: "Search",
+dictionary_save: "Save word",
+dictionary_saved_words: "Saved words",
+dictionary_no_words: "You haven't saved any words yet.",
+dictionary_loading: "Searching definition...",
+dictionary_error: "Could not fetch definition.",
+dictionary_source: "Source",
+dictionary_type: "Type",
+dictionary_definition: "Definition",
+dictionary_example: "Example",
+dictionary_delete: "Delete",
+
     summarize_btn: "Summarize with AI",
     notes_placeholder: "Type your notes here... No space limit.",
     keep_list_open: "Keep list open",
-searching: "Searching...",
+
 multi_mode_active: "Multi-select mode",
 tip_keep_open_on: "Tip: click multiple verses without closing the list.",
 tip_keep_open_off: "Tip: turn this off if you only want one verse and close the list.",
@@ -218,6 +284,16 @@ snip_aplicacion: "Application",
 snip_conclusion: "Conclusion",
 snip_oracion: "Prayer",
 snip_notas: "Notes",
+// formato PDF
+export_pdf: "Export PDF",
+preacher: "Preacher",
+date: "Date",
+my_notes: "My Notes",
+defined_terms_title: "Defined Terms",
+no_defined_terms: "No defined terms.",
+term_definition_label: "Definition",
+
+
 
 
     // Smart Bible
@@ -320,10 +396,37 @@ snip_notas: "Notes",
     defined_terms: "Termos Definidos",
     dictionary_btn: "Dicionário",
     dictionary_placeholder: "Ex: Graça, Expiação...",
+    // Dictionary
+dictionary_title: "Dicionário",
+close: "Fechar",
+
+
+search: "Pesquisar",
+searching: "Pesquisando...",
+save_word: "Salvar palavra",
+saved_words: "Palavras salvas",
+no_saved_words: "Você ainda não salvou nenhuma palavra.",
+language_label: "Idioma",
+spanish: "Espanhol",
+english: "Inglês",
+portuguese: "Português",
+
+dictionary_search: "Buscar",
+dictionary_save: "Salvar palavra",
+dictionary_saved_words: "Palavras salvas",
+dictionary_no_words: "Você ainda não salvou palavras.",
+dictionary_loading: "Buscando definição...",
+dictionary_error: "Não foi possível obter a definição.",
+dictionary_source: "Fonte",
+dictionary_type: "Tipo",
+dictionary_definition: "Definição",
+dictionary_example: "Exemplo",
+dictionary_delete: "Excluir",
+
     summarize_btn: "Resumir com IA",
     notes_placeholder: "Escreva suas notas aqui... Sem limite de espaço.",
     keep_list_open: "Manter lista aberta",
-searching: "Buscando...",
+
 multi_mode_active: "Modo de múltipla seleção",
 tip_keep_open_on: "Dica: clique em vários versículos sem fechar a lista.",
 tip_keep_open_off: "Dica: desative se quiser apenas um versículo e fechar a lista.",
@@ -352,6 +455,15 @@ snip_aplicacion: "Aplicação",
 snip_conclusion: "Conclusão",
 snip_oracion: "Oração",
 snip_notas: "Notas",
+// formato PDF
+export_pdf: "Exportar PDF",
+preacher: "Pregador",
+date: "Data",
+my_notes: "Minhas Notas",
+defined_terms_title: "Termos Definidos",
+no_defined_terms: "Não há termos definidos.",
+term_definition_label: "Definição",
+
 
 
 

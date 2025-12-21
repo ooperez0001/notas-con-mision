@@ -144,6 +144,11 @@ const t = (key: keyof (typeof translations)["es"]) =>
   }, [sermon?.id]);
 
   useEffect(() => {
+  setSavedWords((sermon as any).savedWords ?? []);
+}, [sermon?.id]);
+
+
+  useEffect(() => {
     if (!verseQuery.trim()) {
       setVersionSuggestions([]);
     }
@@ -1402,6 +1407,185 @@ const tryExpandSnippetAtCursor = () => {
   const wordCount = notesText.trim() ? notesText.trim().split(/\s+/).length : 0;
   const charCount = notesText.length;
 
+  const exportNotesPdf = () => {
+  const escapeHtml = (s: string) =>
+    (s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
+  const title = escapeHtml((editedSermon.title ?? "").trim() || "Sermón");
+  const preacher = escapeHtml((editedSermon.preacher ?? "").trim());
+  const date = escapeHtml(String(editedSermon.date ?? "").slice(0, 10));
+  const notes = escapeHtml(String(editedSermon.notes ?? ""));
+
+const passagesHtml =
+  keyPassages.length > 0
+    ? `
+      <ul class="list">
+        ${keyPassages
+          .map((p: any) => {
+            // 1) Label bonito (Lucas 1:1)
+            const rawLabel =
+              typeof p === "string"
+                ? p
+                : p?.reference ?? getPassageLabel(p);
+
+            const niceLabel = String(rawLabel || "")
+              .trim()
+              .split(" ")
+              .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+              .join(" ");
+
+            // 2) Buscar texto del versículo (caja verde)
+            const verseObj =
+              typeof p === "string"
+                ? (editedSermon.verses || []).find(
+                    (v: any) =>
+                      String(v.ref || "")
+                        .toLowerCase()
+                        .trim() === String(p).toLowerCase().trim()
+                  )
+                : (p as any);
+
+            const verseText = verseObj?.text || verseObj?.verseText || "";
+
+            if (!niceLabel) return "";
+
+            // 3) Render
+            return `
+              <li class="passage-item">
+                <div class="passage-ref">${escapeHtml(niceLabel)}</div>
+                ${
+                  verseText
+                    ? `<div class="passage-text">${escapeHtml(
+                        String(verseText)
+                      )}</div>`
+                    : ""
+                }
+              </li>
+            `;
+          })
+          .filter(Boolean)
+          .join("")}
+      </ul>
+    `
+    : `<div class="muted">${escapeHtml(
+        String(t("no_passages" as any))
+      )}</div>`;
+
+const termsHtml =
+  savedWords.length > 0
+    ? `<ul class="list">
+        ${savedWords
+          .map((w) => {
+            const term = escapeHtml(String(w.term || ""));
+            const rawDef = String(w.definition || "");
+
+            // limpia markdown y saltos raros
+            const cleanedDef = rawDef
+              .replace(/\*\*/g, "")     // quita ** bold
+              .replace(/\r?\n{3,}/g, "\n\n")
+              .trim();
+
+            const def = escapeHtml(cleanedDef);
+
+            return `
+              <li class="term-item">
+                <div class="term-term">${term}</div>
+                ${def ? `<div class="term-def">${def}</div>` : ""}
+              </li>
+            `;
+          })
+          .join("")}
+      </ul>`
+    : `<div class="muted">${escapeHtml(String(t("defined_terms_empty" as any)))}</div>`;
+
+
+
+  const html = `
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${title}</title>
+  <style>
+    @page { margin: 18mm; }
+    body { font-family: Arial, sans-serif; color: #111; }
+    .header { border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 14px; }
+    h1 { margin: 0; font-size: 20px; line-height: 1.2; }
+    .meta { margin-top: 6px; font-size: 12px; color: #444; display: flex; gap: 10px; flex-wrap: wrap; }
+    .pill { border: 1px solid #ddd; padding: 4px 8px; border-radius: 999px; background: #fafafa; }
+    .section { margin-top: 14px; }
+    .section h2 { margin: 0 0 6px 0; font-size: 14px; }
+    .muted { color: #666; font-size: 12px; }
+    .list { margin: 6px 0 0 18px; padding: 0; }
+    .list li { margin: 2px 0; }
+    .term-item { margin: 8px 0; }
+.term { font-weight: 700; }
+.term-def { margin-top: 4px; color: #444; font-size: 12px; white-space: pre-line; }
+.term-item { margin: 8px 0; }
+.term { font-weight: 700; margin-bottom: 4px; text-transform: capitalize; }
+.term-def { color: #222; font-size: 12px; line-height: 1.35; white-space: pre-wrap; }
+
+
+   pre{
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>${title}</h1>
+    <div class="meta">
+      ${preacher ? `<div class="pill">${escapeHtml(String(t("preacher" as any)))}: ${preacher}</div>` : ""}
+      ${date ? `<div class="pill">${escapeHtml(String(t("date" as any)))}: ${date}</div>` : ""}
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>${escapeHtml(String(t("key_passages" as any)))}</h2>
+    ${passagesHtml}
+  </div>
+
+  <div class="section">
+    <h2>${escapeHtml(String(t("my_notes" as any)))}</h2>
+    <pre>${notes}</pre>
+  </div>
+</body>
+<div class="section">
+  <h2>${escapeHtml(String(t("defined_terms_title" as any)))}</h2>
+${termsHtml}
+
+</div>
+
+</html>`;
+
+  const w = window.open("", "_blank");
+  if (!w) return;
+
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+
+  setTimeout(() => {
+    w.print();
+  }, 250);
+};
+
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 transition-colors duration-200">
       <div className="p-6 max-w-3xl mx-auto space-y-4">
@@ -1907,6 +2091,13 @@ title={`${t("fmt_highlight" as any)} (Ctrl+Shift+H)`}
               </button>
             </div>
           </div>
+<button
+  type="button"
+  onClick={exportNotesPdf}
+  className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium"
+>
+  {t("export_pdf" as any)}
+</button>
 
         
           {/* Botones inferiores */}
@@ -1974,26 +2165,45 @@ title={`${t("fmt_highlight" as any)} (Ctrl+Shift+H)`}
           {isDictOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
               <div className="w-full max-w-xl rounded-2xl bg-white p-4 shadow-xl">
+               
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">📘 Diccionario</h3>
+           {/* Header */}
+<div className="flex items-center justify-between">
+  <h3 className="text-lg font-semibold">
+    📘 {t("dictionary_title" as any)}
+  </h3>
 
-                  <button
-                    type="button"
-                    onClick={() => setIsDictOpen(false)}
-                    className="text-xl leading-none"
-                    aria-label="Cerrar"
-                  >
-                    ✕
-                  </button>
-                </div>
+  <button
+    type="button"
+    onClick={() => setIsDictOpen(false)}
+    aria-label={String(t("close" as any))}
+    title={String(t("close" as any))}
+    className="p-2 rounded-full hover:bg-gray-200 text-gray-600 hover:text-red-600"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="w-5 h-5"
+    >
+      <path d="M18 6L6 18" />
+      <path d="M6 6l12 12" />
+    </svg>
+  </button>
+</div>
+
 
                 {/* Buscador */}
                 <div className="mt-3 flex gap-2">
                   <input
                     value={dictQuery}
                     onChange={(e) => setDictQuery(e.target.value)}
-                    placeholder="Escribe una palabra…"
+                    placeholder={t("dictionary_placeholder" as any)}
+
                     className="flex-1 rounded-lg border border-gray-300 px-3 py-2"
                   />
 
@@ -2003,7 +2213,8 @@ title={`${t("fmt_highlight" as any)} (Ctrl+Shift+H)`}
                     disabled={dictLoading || !dictQuery.trim()}
                     className="rounded-lg bg-blue-600 px-4 py-2 text-white disabled:opacity-60"
                   >
-                    {dictLoading ? "Buscando…" : "Buscar"}
+                   {dictLoading ? t("dictionary_loading" as any) : t("dictionary_search" as any)}
+
                   </button>
                 </div>
 
@@ -2046,19 +2257,22 @@ title={`${t("fmt_highlight" as any)} (Ctrl+Shift+H)`}
                     disabled={!dictResults?.definitions?.length}
                     className="rounded-lg border border-gray-300 px-4 py-2 disabled:opacity-60"
                   >
-                    Guardar palabra
+                    {t("dictionary_save" as any)}
+
                   </button>
                 </div>
 
                 {/* Guardadas */}
                 <div className="mt-4">
                   <div className="text-sm font-semibold">
-                    Palabras guardadas
+                    {t("dictionary_saved_words" as any)}
+
                   </div>
 
                   {savedWords.length === 0 ? (
                     <p className="mt-1 text-sm text-gray-500">
-                      Aún no has guardado palabras.
+                      {t("dictionary_no_words" as any)}
+
                     </p>
                   ) : (
                     <div className="mt-2 max-h-40 overflow-auto rounded-lg border border-gray-200 p-3">
@@ -2066,6 +2280,13 @@ title={`${t("fmt_highlight" as any)} (Ctrl+Shift+H)`}
                         <div key={w.term} className="mb-3">
                           <div className="flex items-center justify-between">
                             <div className="font-semibold">{w.term}</div>
+
+{w.definition ? (
+  <div className="text-xs text-gray-600 mt-1 whitespace-pre-line">
+    {w.definition}
+  </div>
+) : null}
+
 
                             <button
                               type="button"
