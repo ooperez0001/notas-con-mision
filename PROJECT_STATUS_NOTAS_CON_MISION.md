@@ -275,4 +275,178 @@ Ejemplo correcto:
 ```ts
 const t = (key: string) => getTranslation(language, key);
 
+Perfecto amigo 👍 esta captura cierra todo. Ahora sí podemos decir con certeza cómo está tu sistema y dejar la constitución final, sin tocar código todavía, como prometimos.
+
+Voy lento, claro y en orden.
+
+1️⃣ Lo que tu app YA tiene (confirmado por tu código)
+
+Según bibleService.ts:
+
+✅ Versiones por idioma (OFICIALES)
+
+Español (default):
+
+RVR60
+
+NTV
+
+NVI
+
+DHH
+
+LBLA
+
+Inglés (en):
+
+NIV
+
+KJV
+
+Portugués (pt):
+
+ARC
+
+Esto ya está correctamente definido aquí 👇
+
+export const getVersionsByLanguage = (lang: string) => {
+  switch (lang) {
+    case 'en': return ['NIV', 'KJV'];
+    case 'pt': return ['ARC'];
+    default: return ['RVR60', 'NTV', 'NVI', 'DHH', 'LBLA'];
+  }
+};
+
+
+📌 Importante:
+👉 Esta función YA ES la fuente de verdad para idiomas ↔ versiones.
+
+2️⃣ La “Constitución final” de versiones (ya cerrada)
+
+Te la dejo escrita como reglas fijas. Esto no es código, es diseño lógico.
+
+📜 Constitución de Versiones Bíblicas – Notas con Misión
+
+La app soporta versiones bíblicas por idioma, definidas en un solo lugar (getVersionsByLanguage).
+
+Existe una sola versión preferida global:
+
+nombre: preferredVersion
+
+se usa en:
+
+Biblia Inteligente
+
+Nuevo Sermón
+
+Versículo del día
+
+PDF / exportaciones futuras
+
+Al cambiar el idioma:
+
+solo se muestran las versiones de ese idioma
+
+si preferredVersion no existe en ese idioma:
+
+se usa fallback → availableVersions[0]
+
+Al guardar un pasaje en un sermón, SIEMPRE se guarda:
+
+referencia
+
+texto
+
+versión usada
+
+Los sermones ya guardados NO cambian si el usuario cambia luego la versión preferida.
+
+Nunca debe haber lógica de versiones “local” por pantalla.
+
+Biblia y Sermón deben obedecer la misma regla global.
+
+✅ Con esto tu app es coherente, escalable y sin bugs fantasmas.
+
+3️⃣ El único punto débil actual (muy claro ahora)
+
+⚠️ SermonEditor.tsx
+
+Ahí tienes dos cosas mezcladas:
+
+Por un lado:
+
+const VERSIONS_BY_LANG: Record<string, string[]> = { ... }
+
+
+Por otro lado:
+
+Object.keys(referenceData.versions)
+
+
+📌 Esto significa:
+
+SermonEditor NO depende 100% de getVersionsByLanguage
+
+Depende del resultado que venga de referenceData
+
+👉 Esto no está “mal”, pero rompe la constitución que acabamos de definir.
+
+4️⃣ Qué NO vamos a hacer todavía (tranquilo)
+
+❌ No vamos a:
+
+reescribir SermonEditor
+
+mover lógica
+
+cambiar UI
+
+tocar IA
+
+tocar premium
+
+Todavía NO.
+
+5️⃣ Próximo paso lógico (solo planificación)
+
+El siguiente paso, cuando tú me digas, será:
+
+👉 Unificar SermonEditor con el sistema global de versiones, para que:
+
+use getVersionsByLanguage(language)
+
+respete preferredVersion
+
+y solo valide contra referenceData como disponibilidad, no como fuente principal
+
+Pero eso ya es fase de implementación, no diseño.
+
+6️⃣ Mi veredicto honesto (como arquitecto)
+
+Amigo, esto es importante que lo escuches:
+
+❌ Tu app NO está desordenada
+
+❌ No estás tarde
+
+❌ No tomaste malas decisiones
+
+Al contrario:
+
+✔️ Ya tenías fallback
+
+✔️ Ya tenías idioma ↔ versiones
+
+✔️ Solo faltaba alinear criterios
+
+Eso es nivel producto serio, no principiante.
+
+7️⃣ Te dejo la pregunta (y paramos ahí)
+
+Para seguir igual de seguro:
+
+👉 ¿Quieres que el siguiente paso sea solo PLANEAR cómo unificar SermonEditor con la constitución (sin código todavía), o ya entramos a implementar paso a paso?
+
+Respóndeme eso y seguimos con bisturí, no con machete 💪
+
 
