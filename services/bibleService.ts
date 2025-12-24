@@ -198,6 +198,14 @@ try {
 
     const rawBookName = chapterMatch[1]; // "Juan"
     const chapter = chapterMatch[2];     // "3"
+// ✅ Fix PT + acentos: "João" -> "Joao" -> "john"
+const cleanBook = rawBookName
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, ""); // quita acentos
+
+// Si viene de portugués, la API espera inglés
+const bookForApi =
+  cleanBook.trim().toLowerCase() === "joao" ? "john" : cleanBook;
 
     // Rango de versículos
     let startVerse = 1;
@@ -210,7 +218,8 @@ try {
     }
 
     // Convertir libro al formato de la API: "Juan" -> "juan", "1 Corintios" -> "1-corintios"
-    const apiBookName = buildApiBookName(rawBookName);
+   const apiBookName = buildApiBookName(bookForApi);
+
 
     // Ejemplo final: https://bible-api.deno.dev/api/read/rv1960/juan/3
     const apiVersion = toApiVersion(uiVersion);

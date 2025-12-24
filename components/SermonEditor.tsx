@@ -760,12 +760,23 @@ version: v?.version ?? v?.versionOverride ?? "",
           ? (result as any).data.verses
           : null;
 
+
         // construimos un objeto versions sí o sí
-        const versionsObj =
-          versionsFromApi ??
-          (versesArray
-            ? { [preferredVersion || "rvr1960"]: versesArray }
-            : null);
+      const allowed = getVersionsByLanguage(language).map(normalizeVersion);
+const preferredNorm = normalizeVersion(preferredVersion);
+
+const fallbackVersion =
+  (allowed.includes(preferredNorm) ? preferredNorm : allowed[0]) ||
+  preferredNorm ||
+  "RVR60";
+
+
+const versionsObj =
+  versionsFromApi ??
+  (versesArray
+    ? { [fallbackVersion]: versesArray }
+    : null);
+
 
         if (!versionsObj) {
           setVersionSuggestions([]);
@@ -773,19 +784,18 @@ version: v?.version ?? v?.versionOverride ?? "",
         }
 
         setLastChapterRef(ref);
-        setAvailableVersionKeys(Object.keys(versionsObj));
+        setAvailableVersionKeys(Object.keys(versionsObj).map(normalizeVersion));
+
 
         // ✅ usamos versionsObj (no result.versions) para asegurar que vienen todas las versiones
-        const allowedVersions = VERSIONS_BY_LANG[language] ?? []; // ej: ["rvr1960","nvi","ntv","dhh","lbla"]
+     // Fuente única (constitución): versiones por idioma
+const allowedVersions = getVersionsByLanguage(language);
 
-        const normalizeVersion = (v: string) => {
-          const up = String(v).toUpperCase();
-          // la API a veces devuelve RVR60 en lugar de RVR1960
-          if (up === "RVR60") return "RVR1960";
-          return up;
-        };
 
-        const allowedNormalized = allowedVersions.map(normalizeVersion);
+
+
+const allowedNormalized = allowedVersions.map(normalizeVersion);
+
 
         // IMPORTANTE: usar versionsObj (no result.versions)
         const suggestions = Object.entries(versionsObj)
@@ -893,6 +903,18 @@ version: v?.version ?? v?.versionOverride ?? "",
       }
     }, 350);
   };
+
+// Normaliza versiones para comparar API / UI / guardado
+const normalizeVersion = (v: string) => {
+  const up = String(v ?? "").trim().toUpperCase();
+
+  // Unificamos Reina Valera
+  if (up === "RVR1960") return "RVR60";
+
+  return up;
+};
+
+
   // =======================
   // Version switch (chips)
   // =======================
@@ -901,7 +923,8 @@ version: v?.version ?? v?.versionOverride ?? "",
     if (!lastChapterRef) return;
 
     // 1) Traer el capítulo en la versión seleccionada
-    const result = await fetchVerseFromAPI(lastChapterRef, versionKey);
+ const result = await fetchVerseFromAPI(lastChapterRef, normalizeVersion(versionKey));
+
     if (!result) return;
 
     const ref = (result as any)?.ref || lastChapterRef;
@@ -937,26 +960,35 @@ version: v?.version ?? v?.versionOverride ?? "",
       verses,
       isJesusWords: false,
     };
-    const allowed = VERSIONS_BY_LANG[language] ?? [];
-    const allowedUpper = allowed.map((v) => v.toUpperCase());
+const allowed = getVersionsByLanguage(language);
+const allowedUpper = allowed.map(normalizeVersion);
+
+
 
     // 4) Mantener botones de versiones (sin texto) usando availableVersionKeys
-    const versionButtons = (availableVersionKeys || [])
-      .filter((vk) => {
-        const up = String(vk).toUpperCase();
-        return allowedUpper.length === 0
-          ? up !== String(versionKey).toUpperCase()
-          : allowedUpper.includes(up) &&
-              up !== String(versionKey).toUpperCase();
-      })
-      .map((vk) => ({
-        id: `${ref}-${vk}`,
-        reference: ref,
-        version: String(vk),
-        text: "",
-        verses: [],
-        isJesusWords: false,
-      }));
+const versionButtons = (availableVersionKeys || [])
+  .filter((vk) => {
+    const up = normalizeVersion(String(vk));
+    const current = normalizeVersion(String(versionKey));
+
+    // no mostrar chip de la versión que ya está seleccionada
+    if (up === current) return false;
+
+    // si no hay lista (por alguna razón), mostramos todo lo demás
+    if (allowedUpper.length === 0) return true;
+
+    // mostrar solo las permitidas por idioma
+    return allowedUpper.includes(up);
+  })
+  .map((vk) => ({
+    id: `${ref}-${vk}`,
+    reference: ref,
+    version: String(vk),
+    text: "",
+    verses: [],
+    isJesusWords: false,
+  }));
+
 
     setSelectedVersion(String(versionKey)); // para que quede “seleccionada”
     setVersionSuggestions([chapterSuggestion, ...versionButtons]);
@@ -987,18 +1019,34 @@ version: v?.version ?? v?.versionOverride ?? "",
       }
 
       // 1) sacar todas las versiones disponibles que devolvió la API
-      const availableVersions = Object.keys(referenceData.versions);
+     const apiVersions = Object.keys(referenceData.versions || {});
+const apiNormalized = apiVersions.map(normalizeVersion);
 
-      // 2) elegir versión: primero la preferida (si existe), si no, la primera
-      const chosenVersion =
-        (preferredVersion &&
-          availableVersions.includes(preferredVersion) &&
-          preferredVersion) ||
-        availableVersions[0] ||
-        "RVR60";
+// 1) Versiones permitidas por idioma (fuente única)
+const allowed = getVersionsByLanguage(language);
+const allowedNorm = allowed.map(normalizeVersion);
 
-      // 3) lista de versículos de ese capítulo en esa versión
-      const versesList = referenceData.versions[chosenVersion] as BibleVerse[];
+// 2) Elegir versión:
+// - preferredVersion si es permitida y existe en la API
+// - si no, la primera permitida que exista en la API
+// - si no, fallback a la primera que venga de la API o RVR60
+const preferredNorm = normalizeVersion(preferredVersion);
+
+let chosenVersion =
+  (preferredVersion &&
+    allowedNorm.includes(preferredNorm) &&
+    apiNormalized.includes(preferredNorm) &&
+    preferredNorm) ||
+  allowedNorm.find((v) => apiNormalized.includes(v)) ||
+  apiNormalized[0] ||
+  "RVR60";
+
+// 3) referenceData.versions usa keys originales: buscamos la key real equivalente
+const chosenKey =
+  apiVersions.find((k) => normalizeVersion(k) === chosenVersion) || chosenVersion;
+
+const versesList = referenceData.versions[chosenKey] as BibleVerse[];
+
 
       if (!versesList || versesList.length === 0) {
         setPassageError("No se encontraron versículos para este pasaje.");
