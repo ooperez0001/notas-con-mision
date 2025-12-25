@@ -83,6 +83,12 @@ const t = (key: keyof (typeof translations)["es"]) =>
   );
   const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
+  useEffect(() => {
+  if (language === "pt" && !selectedVersion) {
+    setSelectedVersion("ARC");
+  }
+}, [language, selectedVersion]);
+
   const [keepOpen, setKeepOpen] = useState(false);
   const VERSIONS_BY_LANG: Record<string, string[]> = {
     es: ["rvr1960", "nvi", "ntv", "dhh", "lbla"],
@@ -280,12 +286,62 @@ version: v?.version ?? v?.versionOverride ?? "",
             })),
 
       // ✅ guardar solo las referencias (Juan 3:1, etc.)
-      keyPassages: (keyPassages ?? [])
-        .map((p: any) => {
-          if (typeof p === "string") return p;
-          return p?.reference ?? p?.ref ?? p?.verseRef ?? p?.passageRef ?? "";
-        })
-        .filter(Boolean),
+     // ✅ guardar keyPassages como OBJETOS (reference + version + text)
+keyPassages: (keyPassages ?? [])
+  .map((p: any) => {
+    // si viene string, lo convertimos a objeto
+    if (typeof p === "string") {
+      const ref = capitalizeRef(p);
+      // buscamos texto/version desde verses (si existe)
+      const fromVerse =
+        (editedSermon.verses ?? []).find((v: any) =>
+          String(v?.ref ?? v?.reference ?? v?.verseRef ?? "")
+            .trim()
+            .toLowerCase() === ref.trim().toLowerCase()
+        ) ?? null;
+
+      return {
+        reference: ref,
+        version: String(fromVerse?.version ?? "").trim() || "RVR60",
+        text: String(fromVerse?.text ?? fromVerse?.verseText ?? "").trim() || "",
+      };
+    }
+
+    // si ya viene objeto
+    const reference = capitalizeRef(
+      p?.reference ?? p?.ref ?? p?.verseRef ?? p?.passageRef ?? ""
+    );
+
+    // intenta sacar version/text del mismo objeto, o de verses si hace falta
+    const fromVerse =
+      (editedSermon.verses ?? []).find((v: any) =>
+        String(v?.ref ?? v?.reference ?? v?.verseRef ?? "")
+          .trim()
+          .toLowerCase() === reference.trim().toLowerCase()
+      ) ?? null;
+
+    const version =
+      String(p?.version ?? p?.versionOverride ?? fromVerse?.version ?? "").trim() ||
+      "RVR60";
+
+    const text =
+      String(p?.text ?? p?.verseText ?? fromVerse?.text ?? fromVerse?.verseText ?? "")
+        .trim() || "";
+
+    return { reference, version, text };
+  })
+  // quitar vacíos
+  .filter((p: any) => p && p.reference)
+  // ✅ dedupe (reference + version)
+  .reduce((acc: any[], p: any) => {
+    const key = `${String(p.reference).toLowerCase()}|${String(p.version).toLowerCase()}`;
+    if (acc.some((x) => `${String(x.reference).toLowerCase()}|${String(x.version).toLowerCase()}` === key)) {
+      return acc;
+    }
+    acc.push({ ...p, version: String(p.version).toUpperCase() });
+    return acc;
+  }, []),
+
 
       dictionary: savedWords,
       definitions: editedSermon.definitions ?? {},
@@ -785,6 +841,40 @@ const versionsObj =
 
         setLastChapterRef(ref);
         setAvailableVersionKeys(Object.keys(versionsObj).map(normalizeVersion));
+        setSelectedVersion((prev) => {
+  const keysUpper = Object.keys(versionsObj).map(normalizeVersion);
+
+  // 1) Si PT y existe ARC, ese es el default
+  if (language === "pt" && keysUpper.includes("ARC")) return "ARC";
+
+  // 2) Si ya había una selección válida, respétala
+  const prevUp = String(prev || "").toUpperCase();
+  if (prevUp && keysUpper.includes(prevUp)) return prevUp;
+
+  // 3) Si no, usa preferredVersion si existe en keys; si no, la primera
+  const prefUp = normalizeVersion(preferredVersion);
+  if (prefUp && keysUpper.includes(prefUp)) return prefUp;
+
+  return keysUpper[0] || prevUp || "ARC";
+});
+
+
+        // ✅ Default de versión por idioma (sin pisar selección manual)
+const normalizedKeys = Object.keys(versionsObj).map(normalizeVersion);
+
+const defaultByLanguage =
+  language === "pt" && normalizedKeys.includes("ARC")
+    ? "ARC"
+    : normalizeVersion(getVersionsByLanguage(language)[0] || normalizedKeys[0] || "");
+
+// Si aún no hay selección válida, ponemos default
+setSelectedVersion((prev) => {
+  const prevNorm = normalizeVersion(prev || "");
+  if (prevNorm && normalizedKeys.includes(prevNorm)) return prevNorm;
+  return defaultByLanguage;
+});
+
+
 
 
         // ✅ usamos versionsObj (no result.versions) para asegurar que vienen todas las versiones
@@ -795,6 +885,17 @@ const allowedVersions = getVersionsByLanguage(language);
 
 
 const allowedNormalized = allowedVersions.map(normalizeVersion);
+
+// ✅ versión que debe mostrar el preview (aunque no venga en versionsObj)
+const activePreviewVersion = normalizeVersion(
+  selectedVersion || preferredVersion || "RVR60"
+);
+
+// ✅ versiones para los botones del preview (incluye la activa siempre)
+const previewVersions = Array.from(
+  new Set([activePreviewVersion, ...normalizedKeys])
+).filter((v) => allowedNormalized.includes(v));
+
 
 
         // IMPORTANTE: usar versionsObj (no result.versions)
@@ -908,11 +1009,15 @@ const allowedNormalized = allowedVersions.map(normalizeVersion);
 const normalizeVersion = (v: string) => {
   const up = String(v ?? "").trim().toUpperCase();
 
-  // Unificamos Reina Valera
+  // Unificamos Reina Valera 1960
   if (up === "RVR1960") return "RVR60";
+  if (up === "RV1960") return "RVR60";     // <-- ESTA ES LA CLAVE
+  if (up === "RV 1960") return "RVR60";
+  if (up === "RVR 1960") return "RVR60";
 
   return up;
 };
+
 
 
   // =======================
@@ -983,7 +1088,9 @@ const versionButtons = (availableVersionKeys || [])
   .map((vk) => ({
     id: `${ref}-${vk}`,
     reference: ref,
-    version: String(vk),
+   version: normalizeVersion(String(vk)),
+
+
     text: "",
     verses: [],
     isJesusWords: false,
@@ -992,6 +1099,8 @@ const versionButtons = (availableVersionKeys || [])
 
     setSelectedVersion(String(versionKey)); // para que quede “seleccionada”
     setVersionSuggestions([chapterSuggestion, ...versionButtons]);
+ 
+
   };
 
   const handleAddPassage = async (
@@ -1001,17 +1110,21 @@ const versionButtons = (availableVersionKeys || [])
     const ref = (refOverride ?? newPassageRef).trim();
     if (!ref) return;
 
-    const chosenVersion =
-      versionOverride || selectedVersion || preferredVersion;
+const chosenVersionNorm = normalizeVersion(
+  versionOverride || selectedVersion || preferredVersion || "RVR60"
+);
+
+
 
     try {
       setAddingPassage(true);
       setPassageError(null);
 
       // Usamos el MISMO helper que SmartBible
-      const referenceData: BibleSearchResult | null = await fetchVerseFromAPI(
-        ref
-      );
+    const referenceData: BibleSearchResult | null =
+  await fetchVerseFromAPI(ref, chosenVersionNorm);
+
+
 
       if (!referenceData || !referenceData.versions) {
         setPassageError("No se encontró este pasaje.");
@@ -1021,6 +1134,11 @@ const versionButtons = (availableVersionKeys || [])
       // 1) sacar todas las versiones disponibles que devolvió la API
      const apiVersions = Object.keys(referenceData.versions || {});
 const apiNormalized = apiVersions.map(normalizeVersion);
+
+// ✅ Si el pasaje base ya está en RVR60 pero la API no lo trae en "versions", lo agregamos
+if (!apiNormalized.includes("RVR60")) {
+}
+
 
 // 1) Versiones permitidas por idioma (fuente única)
 const allowed = getVersionsByLanguage(language);
@@ -1032,18 +1150,12 @@ const allowedNorm = allowed.map(normalizeVersion);
 // - si no, fallback a la primera que venga de la API o RVR60
 const preferredNorm = normalizeVersion(preferredVersion);
 
-let chosenVersion =
-  (preferredVersion &&
-    allowedNorm.includes(preferredNorm) &&
-    apiNormalized.includes(preferredNorm) &&
-    preferredNorm) ||
-  allowedNorm.find((v) => apiNormalized.includes(v)) ||
-  apiNormalized[0] ||
-  "RVR60";
+
 
 // 3) referenceData.versions usa keys originales: buscamos la key real equivalente
 const chosenKey =
-  apiVersions.find((k) => normalizeVersion(k) === chosenVersion) || chosenVersion;
+  apiVersions.find((k) => normalizeVersion(k) === chosenVersionNorm) || chosenVersionNorm;
+
 
 const versesList = referenceData.versions[chosenKey] as BibleVerse[];
 
@@ -1059,24 +1171,29 @@ const versesList = referenceData.versions[chosenKey] as BibleVerse[];
         .join("\n");
 
       // 5) Referencia normalizada (para que SIEMPRE se vea "Juan 3", "Mateo 6:33", etc.)
-      const reference = (referenceData?.ref || ref || "").trim();
+      const reference = (refOverride ?? ref ?? referenceData?.ref ?? "").trim();
+
       // ✅ Guardar el pasaje con texto completo (para que no se pierda al reabrir)
-      const newVerse = {
-        ref: reference, // ej: "juan 3:1" o "juan 3"
-        text: fullText, // texto del capítulo/verso
-        version: chosenVersion, // ej: "RVR60"
-      };
-      setEditedSermon((prev: any) => ({
-        ...prev,
-        verses: [...(prev.verses || []), newVerse],
-        keyPassages: [...(prev.keyPassages || []), reference],
-      }));
+      
+
+const newVerse = {
+  ref: reference,
+  text: fullText,
+  version: chosenVersionNorm,
+};
+
+   setEditedSermon((prev: any) => ({
+  ...prev,
+  verses: [...(prev.verses || []), newVerse],
+  keyPassages: [...(prev.keyPassages || []), newPassage], // ✅ guarda el objeto completo
+}));
+
 
       // 6) Crear el pasaje clave que se guarda en el sermón
       const newPassage: KeyPassage = {
-        id: `${reference}-${chosenVersion}-${Date.now()}`, // id más único
+        id: `${reference}-${chosenVersionNorm}-${Date.now()}`, // id más único
         reference, // ✅ ahora SI se guarda la referencia correcta
-        version: chosenVersion, // ✅ versión
+        version: chosenVersionNorm, // ✅ versión
         text: fullText, // ✅ capítulo completo o versículo según lo que escribas
       };
 
@@ -1806,9 +1923,19 @@ ${termsHtml}
                     {/* 📖 Capítulo con texto */}
                     {chapterSuggestions.map((s) => (
                       <div key={`${s.reference}-${s.version}`} className="mb-3">
-                        <span className="font-medium capitalize">
-                          {s.reference}
-                        </span>
+                        <span className="font-medium capitalize flex items-center gap-2">
+  {s.reference}
+
+  <span className="text-[10px] px-2 py-[1px] rounded-full border border-gray-300 text-gray-600">
+    {String(
+      (s as any).version ||
+      selectedVersion ||
+      preferredVersion ||
+      "RVR60"
+    ).toUpperCase()}
+  </span>
+</span>
+
 
                         <div className="mt-2 space-y-1 text-xs text-gray-700">
                           {(Array.isArray(s.verses) ? s.verses : []).map(
@@ -1858,15 +1985,26 @@ ${termsHtml}
                           <button
                             key={`btn-${s.version}`}
                             type="button"
-                            className="px-3 py-1 rounded-full border text-xs bg-white hover:bg-gray-50"
-                            onClick={() =>
-                              loadChapterInVersion(String(s.version))
-                            }
+                            className={`px-3 py-1 rounded-full border text-xs transition
+  ${selectedVersion?.toUpperCase() === String(s.version).toUpperCase()
+    ? "bg-blue-600 text-white border-blue-600"
+    : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50"
+  }`}
+
+                           
+                        onClick={() => {
+  const v = normalizeVersion(String(s.version));
+  setSelectedVersion(v);
+  loadChapterInVersion(v);
+}}
+
+
                             title={`Cambiar a ${String(s.version)}`}
                           >
                             {String(s.version).toUpperCase()}
                           </button>
                         ))}
+
                       </div>
                     )}
                   </div>
@@ -1900,8 +2038,8 @@ ${termsHtml}
 const text = verseObj?.text || verseObj?.verseText || "";
 
 
-              const version =
-                typeof p === "string" ? "" : (p as any).version ?? "";
+           const version = verseObj?.version ?? "";
+
 
               return (
                 <div

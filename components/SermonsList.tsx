@@ -121,15 +121,64 @@ export const SermonsList: React.FC<SermonsListProps> = ({ sermons, setSermons, u
     <div className="space-y-4">
       {filteredSermons.length > 0 ? (
         filteredSermons.map((sermon) => {
-          const rawPassages =
-  (Array.isArray((sermon as any).verses) && (sermon as any).verses.length > 0)
-    ? (sermon as any).verses
-    : ((sermon as any).keyPassages ?? []);
+  const rawKeyPassages = Array.isArray((sermon as any).keyPassages)
+  ? (sermon as any).keyPassages
+  : [];
 
-const passageLabels = rawPassages
-  .map((p: any) => (typeof p === "string" ? p : p.reference ?? p.ref ?? ""))
-  .filter(Boolean);
-            
+const rawVerses = Array.isArray((sermon as any).verses)
+  ? (sermon as any).verses
+  : [];
+
+const toLabel = (p: any) =>
+  (typeof p === "string" ? p : (p?.reference ?? p?.ref ?? "")).trim();
+
+const toVersion = (p: any) =>
+  (typeof p === "string" ? "" : String(p?.version ?? "")).trim();
+// 🔑 normalizadores para ordenar según keyPassages (caja verde)
+const normKey = (s: string) =>
+  (s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+
+const refKey = (p: any) =>
+  normKey(p?.reference ?? p?.ref ?? (typeof p === "string" ? p : ""));
+
+// ✅ SOLO keyPassages (la caja verde manda)
+const combined = (rawKeyPassages ?? [])
+  .map((p: any) => ({ label: toLabel(p), version: toVersion(p) }))
+  .filter((x) => x.label);
+
+// 🟡 fallback opcional SOLO si keyPassages está vacío
+// (si lo activas, evita traer basura vieja)
+if (combined.length === 0 && Array.isArray(rawVerses) && rawVerses.length > 0) {
+  combined.push(
+    ...rawVerses
+      .map((v: any) => ({
+        label: String(v?.ref ?? v?.reference ?? "").trim(),
+        version: String(v?.version ?? "").trim(),
+      }))
+      .filter((x) => x.label)
+  );
+}
+
+
+// dedupe dejando la ÚLTIMA aparición (la más nueva)
+const m = new Map<string, { label: string; version: string }>();
+for (const item of combined) m.set(item.label, item);
+
+// mostrar más nuevas primero
+// ✅ ordenar según el orden real de keyPassages (la caja verde manda)
+const keyOrder = (sermon as any).keyPassages ?? [];
+const orderIndex = new Map<string, number>();
+keyOrder.forEach((p: any, i: number) => orderIndex.set(refKey(p), i));
+
+const passageLabels = Array.from(m.values())
+  .sort((a, b) => {
+    const ia = orderIndex.get(normKey(a.label)) ?? 9999;
+    const ib = orderIndex.get(normKey(b.label)) ?? 9999;
+    return ia - ib; // mismo orden que keyPassages
+  })
+  .map((x) => (x.version ? `${x.label} (${x.version})` : x.label));
+
+
           return (
             <div
               key={sermon.id}
@@ -167,9 +216,8 @@ const passageLabels = rawPassages
 
               {passageLabels.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {passageLabels.slice(0, 2).map((ref: string) => (
-                    <span
-                      key={ref}
+                 {passageLabels.map((ref: string, idx: number) => (
+  <span key={`${ref}-${idx}`}
                       className="px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs"
                     >
                       {ref}

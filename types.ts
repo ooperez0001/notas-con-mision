@@ -8,9 +8,10 @@ export interface BibleVerse {
 export interface BibleSearchResult {
   ref: string;
   versions: {
-    [key: string]: BibleVerse[];
+    [key: string]: BibleVerse[] | string;
   };
 }
+
 
 export interface SavedVerse {
   ref: string;
@@ -43,6 +44,13 @@ export interface Sermon {
   dictionary?: SavedWord[];
 
 }
+export interface KeyPassage {
+  id: string;
+  reference: string;
+  version: string;
+  text: string;
+}
+
 
 export interface PersonalNote {
   id: string;
