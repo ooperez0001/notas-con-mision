@@ -1267,7 +1267,11 @@ const textToCopy = text ? `${header} — ${text}` : header;
     // 2) quita también el texto guardado de ese pasaje
     setEditedSermon((prev: any) => ({
       ...prev,
-      keyPassages: (prev.keyPassages || []).filter((r: string) => r !== pid),
+      keyPassages: (prev.keyPassages || []).filter((p: any) => {
+  const ref = typeof p === "string" ? p : (p?.reference ?? p?.ref ?? "");
+  return ref !== pid;
+}),
+
       verses: (prev.verses || []).filter(
         (v: any) => (v.ref ?? v.reference) !== pid
       ),

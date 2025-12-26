@@ -449,4 +449,37 @@ Para seguir igual de seguro:
 
 Respóndeme eso y seguimos con bisturí, no con machete 💪
 
+--------------------------------------------------------------------------------------------------------------
+## 🧹 Limpieza y consistencia de Pasajes Clave (KeyPassages)
+
+### 🎯 Problema
+- En **Mis Sermones** aparecían pasajes duplicados o “fantasma”.
+- Algunos pasajes eliminados en el editor reaparecían al volver a la lista.
+- `keyPassages` se guardaba de forma inconsistente:
+  - a veces como `string`
+  - a veces como `object`
+- El orden de los pasajes no respetaba el orden visual de la caja verde.
+
+---
+
+### ✅ Solución implementada
+
+#### 1️⃣ La caja verde es la autoridad
+- Lo que se muestra en la **caja verde** del editor es exactamente lo que:
+  - se guarda en el sermón
+  - se muestra en **Mis Sermones**
+- Al eliminar un pasaje:
+  - se elimina de la UI
+  - se elimina de `editedSermon.keyPassages`
+  - se elimina de `editedSermon.verses`
+- No quedan residuos ni referencias fantasma.
+
+#### 2️⃣ Persistencia limpia de `keyPassages`
+- `keyPassages` ahora se guarda **solo como objetos**:
+  ```ts
+  {
+    reference: "Mateo 6:33",
+    version: "RVR60",
+    text: "Mas buscad primeramente..."
+  }
 
