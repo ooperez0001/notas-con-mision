@@ -1,14 +1,27 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Sermon, BibleSearchResult, BibleVerse, SavedVerse, UserProfile, Language,} from "../types";
+import {
+  Sermon,
+  BibleSearchResult,
+  BibleVerse,
+  SavedVerse,
+  UserProfile,
+  Language,
+} from "../types";
 import { Modal } from "./Modal";
 import { BibleDictionary } from "./BibleDictionary";
-import { fetchVerseFromAPI, searchByKeyword, getVersionsByLanguage, } from "../services/bibleService";
+import {
+  fetchVerseFromAPI,
+  searchByKeyword,
+  getVersionsByLanguage,
+} from "../services/bibleService";
 import { summarizeSermon } from "../services/geminiService";
 import { translations, getTranslation } from "../services/translations";
 import { defineWordEs } from "../services/geminiService";
-import { getLocalYMD, normalizeToLocalYMD, formatYMDForUI } from "../services/dateUtils";
-
-
+import {
+  getLocalYMD,
+  normalizeToLocalYMD,
+  formatYMDForUI,
+} from "../services/dateUtils";
 
 interface SermonEditorProps {
   sermon: Sermon;
@@ -28,7 +41,6 @@ type KeyPassage = {
   verses?: BibleVerse[]; // ✅ ahora sí existe (opcional)
 };
 
-
 type KeyPassageOption = {
   id: string;
   reference: string;
@@ -45,7 +57,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
   onOpenPremium,
   language,
   preferredVersion,
-}) => {
+}) => { 
   const [editedSermon, setEditedSermon] = useState<Sermon>(sermon);
   const [verseQuery, setVerseQuery] = useState("");
   const [verseResults, setVerseResults] = useState<BibleSearchResult | null>(
@@ -63,9 +75,8 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
   const [isSummarizing, setIsSummarizing] = useState(false);
   const notesRef = useRef<HTMLTextAreaElement>(null);
   const suggestionsTimerRef = useRef<number | null>(null);
-const t = (key: keyof (typeof translations)["es"]) =>
-  getTranslation(language as import("../types").Language, key);
-
+  const t = (key: keyof (typeof translations)["es"]) =>
+    getTranslation(language as import("../types").Language, key);
 
   const [sermonTitle, setSermonTitle] = useState("");
   const [preacherName, setPreacherName] = useState("");
@@ -84,21 +95,18 @@ const t = (key: keyof (typeof translations)["es"]) =>
   const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
   useEffect(() => {
-  if (language === "pt" && !selectedVersion) {
-    setSelectedVersion("ARC");
-  }
-}, [language, selectedVersion]);
+    const allowed = getVersionsByLanguage(language);
+    const fallback = allowed?.[0] ?? null;
+
+    if (!selectedVersion && fallback) {
+      setSelectedVersion(fallback);
+    }
+  }, [language, selectedVersion]);
 
   const [keepOpen, setKeepOpen] = useState(false);
-  const VERSIONS_BY_LANG: Record<string, string[]> = {
-    es: ["rvr1960", "nvi", "ntv", "dhh", "lbla"],
-    en: ["kjv", "niv"],
-    pt: ["arc"],
-  };
+
   const [showSnippetsHelp, setShowSnippetsHelp] = useState(false);
 
-  
- 
   // =======================
   // Diccionario por sermón
   // =======================
@@ -152,9 +160,8 @@ const t = (key: keyof (typeof translations)["es"]) =>
   }, [sermon?.id]);
 
   useEffect(() => {
-  setSavedWords((sermon as any).savedWords ?? []);
-}, [sermon?.id]);
-
+    setSavedWords((sermon as any).savedWords ?? []);
+  }, [sermon?.id]);
 
   useEffect(() => {
     if (!verseQuery.trim()) {
@@ -169,23 +176,21 @@ const t = (key: keyof (typeof translations)["es"]) =>
     }
   }, []);
 
-useEffect(() => {
-  const dict = (editedSermon as any)?.dictionary;
-  setSavedWords(Array.isArray(dict) ? dict : []);
-}, [editedSermon?.id]);
-
-
+  useEffect(() => {
+    const dict = (editedSermon as any)?.dictionary;
+    setSavedWords(Array.isArray(dict) ? dict : []);
+  }, [editedSermon?.id]);
 
   const handleAddVerse = (version: string, verses: BibleVerse[]) => {
     const fullText = verses.map((v) => v.text).join(" ");
     const hasJesusWords = verses.some((v) => v.isJesusWords);
 
-  const newVerse: SavedVerse = {
-  ref: verseResults!.ref,
-  text: fullText,
-  version: version,
-  isJesusWords: hasJesusWords,
-};
+    const newVerse: SavedVerse = {
+      ref: verseResults!.ref,
+      text: fullText,
+      version: version,
+      isJesusWords: hasJesusWords,
+    };
 
     setEditedSermon((prev) => ({
       ...prev,
@@ -242,27 +247,22 @@ useEffect(() => {
         selectionStart + prefixWithNewline.length;
     }, 0);
   };
-const capitalizeRef = (ref: string) => {
-  const s = (ref || "").trim();
-  if (!s) return s;
+  const capitalizeRef = (ref: string) => {
+    const s = (ref || "").trim();
+    if (!s) return s;
 
-  // Capitaliza la primera letra de cada palabra
-  // "mateo 6:12" -> "Mateo 6:12"
-  // "1 corintios 13:4" -> "1 Corintios 13:4"
-  return s.replace(/\p{L}+/gu, (w) => w.charAt(0).toUpperCase() + w.slice(1));
-};
+    // Capitaliza la primera letra de cada palabra
+    // "mateo 6:12" -> "Mateo 6:12"
+    // "1 corintios 13:4" -> "1 Corintios 13:4"
+    return s.replace(/\p{L}+/gu, (w) => w.charAt(0).toUpperCase() + w.slice(1));
+  };
 
-
-const handleCopyVerse = (verse: SavedVerse) => {
-  
-  const ref = capitalizeRef(verse.ref);
-  navigator.clipboard.writeText(
-    `${ref} (${verse.version}) — ${verse.text}`
-  );
-  setCopySuccess(verse.ref);
-  setTimeout(() => setCopySuccess(null), 2000);
-};
-
+  const handleCopyVerse = (verse: SavedVerse) => {
+    const ref = capitalizeRef(verse.ref);
+    navigator.clipboard.writeText(`${ref} (${verse.version}) — ${verse.text}`);
+    setCopySuccess(verse.ref);
+    setTimeout(() => setCopySuccess(null), 2000);
+  };
 
   const handleSave = () => {
     const toSave = {
@@ -272,76 +272,91 @@ const handleCopyVerse = (verse: SavedVerse) => {
       verses:
         editedSermon.verses && editedSermon.verses.length > 0
           ? editedSermon.verses.map((v: any) => ({
-
-          ref: capitalizeRef(v?.ref ?? v?.reference ?? v?.verseRef ?? ""),
-text: v?.text ?? v?.verseText ?? "",
-version: v?.version ?? v?.versionOverride ?? "",
-
-
+              ref: capitalizeRef(v?.ref ?? v?.reference ?? v?.verseRef ?? ""),
+              text: v?.text ?? v?.verseText ?? "",
+              version: v?.version ?? v?.versionOverride ?? "",
             }))
           : ((editedSermon as any).passageLabels ?? []).map((p: any) => ({
-             ref: capitalizeRef(p?.ref ?? p?.reference ?? p?.verseRef ?? ""),
+              ref: capitalizeRef(p?.ref ?? p?.reference ?? p?.verseRef ?? ""),
               text: p?.text ?? p?.verseText ?? p?.label ?? "",
               version: p?.version ?? p?.versionOverride ?? "",
             })),
 
       // ✅ guardar solo las referencias (Juan 3:1, etc.)
-     // ✅ guardar keyPassages como OBJETOS (reference + version + text)
-keyPassages: (keyPassages ?? [])
-  .map((p: any) => {
-    // si viene string, lo convertimos a objeto
-    if (typeof p === "string") {
-      const ref = capitalizeRef(p);
-      // buscamos texto/version desde verses (si existe)
-      const fromVerse =
-        (editedSermon.verses ?? []).find((v: any) =>
-          String(v?.ref ?? v?.reference ?? v?.verseRef ?? "")
-            .trim()
-            .toLowerCase() === ref.trim().toLowerCase()
-        ) ?? null;
+      // ✅ guardar keyPassages como OBJETOS (reference + version + text)
+      keyPassages: (keyPassages ?? [])
+        .map((p: any) => {
+          // si viene string, lo convertimos a objeto
+          if (typeof p === "string") {
+            const ref = capitalizeRef(p);
+            // buscamos texto/version desde verses (si existe)
+            const fromVerse =
+              (editedSermon.verses ?? []).find(
+                (v: any) =>
+                  String(v?.ref ?? v?.reference ?? v?.verseRef ?? "")
+                    .trim()
+                    .toLowerCase() === ref.trim().toLowerCase()
+              ) ?? null;
 
-      return {
-        reference: ref,
-        version: String(fromVerse?.version ?? "").trim() || "RVR60",
-        text: String(fromVerse?.text ?? fromVerse?.verseText ?? "").trim() || "",
-      };
-    }
+            return {
+              reference: ref,
+              version: String(fromVerse?.version ?? "").trim() || "RVR60",
+              text:
+                String(fromVerse?.text ?? fromVerse?.verseText ?? "").trim() ||
+                "",
+            };
+          }
 
-    // si ya viene objeto
-    const reference = capitalizeRef(
-      p?.reference ?? p?.ref ?? p?.verseRef ?? p?.passageRef ?? ""
-    );
+          // si ya viene objeto
+          const reference = capitalizeRef(
+            p?.reference ?? p?.ref ?? p?.verseRef ?? p?.passageRef ?? ""
+          );
 
-    // intenta sacar version/text del mismo objeto, o de verses si hace falta
-    const fromVerse =
-      (editedSermon.verses ?? []).find((v: any) =>
-        String(v?.ref ?? v?.reference ?? v?.verseRef ?? "")
-          .trim()
-          .toLowerCase() === reference.trim().toLowerCase()
-      ) ?? null;
+          // intenta sacar version/text del mismo objeto, o de verses si hace falta
+          const fromVerse =
+            (editedSermon.verses ?? []).find(
+              (v: any) =>
+                String(v?.ref ?? v?.reference ?? v?.verseRef ?? "")
+                  .trim()
+                  .toLowerCase() === reference.trim().toLowerCase()
+            ) ?? null;
 
-    const version =
-      String(p?.version ?? p?.versionOverride ?? fromVerse?.version ?? "").trim() ||
-      "RVR60";
+          const version =
+            String(
+              p?.version ?? p?.versionOverride ?? fromVerse?.version ?? ""
+            ).trim() || "RVR60";
 
-    const text =
-      String(p?.text ?? p?.verseText ?? fromVerse?.text ?? fromVerse?.verseText ?? "")
-        .trim() || "";
+          const text =
+            String(
+              p?.text ??
+                p?.verseText ??
+                fromVerse?.text ??
+                fromVerse?.verseText ??
+                ""
+            ).trim() || "";
 
-    return { reference, version, text };
-  })
-  // quitar vacíos
-  .filter((p: any) => p && p.reference)
-  // ✅ dedupe (reference + version)
-  .reduce((acc: any[], p: any) => {
-    const key = `${String(p.reference).toLowerCase()}|${String(p.version).toLowerCase()}`;
-    if (acc.some((x) => `${String(x.reference).toLowerCase()}|${String(x.version).toLowerCase()}` === key)) {
-      return acc;
-    }
-    acc.push({ ...p, version: String(p.version).toUpperCase() });
-    return acc;
-  }, []),
-
+          return { reference, version, text };
+        })
+        // quitar vacíos
+        .filter((p: any) => p && p.reference)
+        // ✅ dedupe (reference + version)
+        .reduce((acc: any[], p: any) => {
+          const key = `${String(p.reference).toLowerCase()}|${String(
+            p.version
+          ).toLowerCase()}`;
+          if (
+            acc.some(
+              (x) =>
+                `${String(x.reference).toLowerCase()}|${String(
+                  x.version
+                ).toLowerCase()}` === key
+            )
+          ) {
+            return acc;
+          }
+          acc.push({ ...p, version: String(p.version).toUpperCase() });
+          return acc;
+        }, []),
 
       dictionary: savedWords,
       definitions: editedSermon.definitions ?? {},
@@ -653,12 +668,11 @@ keyPassages: (keyPassages ?? [])
 
       // Priorizamos según idioma de la app, pero leyendo desde en.wiktionary
       const preferredLangs =
-  (language as Language) === "es"
-    ? ["Spanish", "Portuguese", "English"]
-    : (language as Language) === "pt"
-    ? ["Portuguese", "Spanish", "English"]
-    : ["English", "Spanish", "Portuguese"];
-
+        (language as Language) === "es"
+          ? ["Spanish", "Portuguese", "English"]
+          : (language as Language) === "pt"
+          ? ["Portuguese", "Spanish", "English"]
+          : ["English", "Spanish", "Portuguese"];
 
       let pickedLang: string | null = null;
 
@@ -675,11 +689,12 @@ keyPassages: (keyPassages ?? [])
         return;
       }
 
- const langsToTry =
-  (language as Language) === "es" ? ["es","pt","en"]
-  : (language as Language) === "pt" ? ["pt","es","en"]
-  : ["en","es","pt"];
-
+      const langsToTry =
+        (language as Language) === "es"
+          ? ["es", "pt", "en"]
+          : (language as Language) === "pt"
+          ? ["pt", "es", "en"]
+          : ["en", "es", "pt"];
 
       const extractDefs = (langName: string, allowJunk: boolean) => {
         const entries = wdata?.[langName] || [];
@@ -772,7 +787,6 @@ keyPassages: (keyPassages ?? [])
           term,
           definition,
           createdAt: getLocalYMD(),
-
         },
       ];
     });
@@ -816,23 +830,18 @@ keyPassages: (keyPassages ?? [])
           ? (result as any).data.verses
           : null;
 
-
         // construimos un objeto versions sí o sí
-      const allowed = getVersionsByLanguage(language).map(normalizeVersion);
-const preferredNorm = normalizeVersion(preferredVersion);
+        const allowed = getVersionsByLanguage(language).map(normalizeVersion);
+        const preferredNorm = normalizeVersion(preferredVersion);
 
-const fallbackVersion =
-  (allowed.includes(preferredNorm) ? preferredNorm : allowed[0]) ||
-  preferredNorm ||
-  "RVR60";
+        const fallbackVersion =
+          (allowed.includes(preferredNorm) ? preferredNorm : allowed[0]) ||
+          preferredNorm ||
+          "RVR60";
 
-
-const versionsObj =
-  versionsFromApi ??
-  (versesArray
-    ? { [fallbackVersion]: versesArray }
-    : null);
-
+        const versionsObj =
+          versionsFromApi ??
+          (versesArray ? { [fallbackVersion]: versesArray } : null);
 
         if (!versionsObj) {
           setVersionSuggestions([]);
@@ -842,61 +851,54 @@ const versionsObj =
         setLastChapterRef(ref);
         setAvailableVersionKeys(Object.keys(versionsObj).map(normalizeVersion));
         setSelectedVersion((prev) => {
-  const keysUpper = Object.keys(versionsObj).map(normalizeVersion);
+          const keysUpper = Object.keys(versionsObj).map(normalizeVersion);
 
-  // 1) Si PT y existe ARC, ese es el default
-  if (language === "pt" && keysUpper.includes("ARC")) return "ARC";
+          // 1) Si PT y existe ARC, ese es el default
+          if (language === "pt" && keysUpper.includes("ARC")) return "ARC";
 
-  // 2) Si ya había una selección válida, respétala
-  const prevUp = String(prev || "").toUpperCase();
-  if (prevUp && keysUpper.includes(prevUp)) return prevUp;
+          // 2) Si ya había una selección válida, respétala
+          const prevUp = String(prev || "").toUpperCase();
+          if (prevUp && keysUpper.includes(prevUp)) return prevUp;
 
-  // 3) Si no, usa preferredVersion si existe en keys; si no, la primera
-  const prefUp = normalizeVersion(preferredVersion);
-  if (prefUp && keysUpper.includes(prefUp)) return prefUp;
+          // 3) Si no, usa preferredVersion si existe en keys; si no, la primera
+          const prefUp = normalizeVersion(preferredVersion);
+          if (prefUp && keysUpper.includes(prefUp)) return prefUp;
 
-  return keysUpper[0] || prevUp || "ARC";
-});
-
+          return keysUpper[0] || prevUp || "ARC";
+        });
 
         // ✅ Default de versión por idioma (sin pisar selección manual)
-const normalizedKeys = Object.keys(versionsObj).map(normalizeVersion);
+        const normalizedKeys = Object.keys(versionsObj).map(normalizeVersion);
 
-const defaultByLanguage =
-  language === "pt" && normalizedKeys.includes("ARC")
-    ? "ARC"
-    : normalizeVersion(getVersionsByLanguage(language)[0] || normalizedKeys[0] || "");
+        const defaultByLanguage =
+          language === "pt" && normalizedKeys.includes("ARC")
+            ? "ARC"
+            : normalizeVersion(
+                getVersionsByLanguage(language)[0] || normalizedKeys[0] || ""
+              );
 
-// Si aún no hay selección válida, ponemos default
-setSelectedVersion((prev) => {
-  const prevNorm = normalizeVersion(prev || "");
-  if (prevNorm && normalizedKeys.includes(prevNorm)) return prevNorm;
-  return defaultByLanguage;
-});
-
-
-
+        // Si aún no hay selección válida, ponemos default
+        setSelectedVersion((prev) => {
+          const prevNorm = normalizeVersion(prev || "");
+          if (prevNorm && normalizedKeys.includes(prevNorm)) return prevNorm;
+          return defaultByLanguage;
+        });
 
         // ✅ usamos versionsObj (no result.versions) para asegurar que vienen todas las versiones
-     // Fuente única (constitución): versiones por idioma
-const allowedVersions = getVersionsByLanguage(language);
+        // Fuente única (constitución): versiones por idioma
+        const allowedVersions = getVersionsByLanguage(language);
 
+        const allowedNormalized = allowedVersions.map(normalizeVersion);
 
+        // ✅ versión que debe mostrar el preview (aunque no venga en versionsObj)
+        const activePreviewVersion = normalizeVersion(
+          selectedVersion || preferredVersion || "RVR60"
+        );
 
-
-const allowedNormalized = allowedVersions.map(normalizeVersion);
-
-// ✅ versión que debe mostrar el preview (aunque no venga en versionsObj)
-const activePreviewVersion = normalizeVersion(
-  selectedVersion || preferredVersion || "RVR60"
-);
-
-// ✅ versiones para los botones del preview (incluye la activa siempre)
-const previewVersions = Array.from(
-  new Set([activePreviewVersion, ...normalizedKeys])
-).filter((v) => allowedNormalized.includes(v));
-
-
+        // ✅ versiones para los botones del preview (incluye la activa siempre)
+        const previewVersions = Array.from(
+          new Set([activePreviewVersion, ...normalizedKeys])
+        ).filter((v) => allowedNormalized.includes(v));
 
         // IMPORTANTE: usar versionsObj (no result.versions)
         const suggestions = Object.entries(versionsObj)
@@ -1005,20 +1007,20 @@ const previewVersions = Array.from(
     }, 350);
   };
 
-// Normaliza versiones para comparar API / UI / guardado
-const normalizeVersion = (v: string) => {
-  const up = String(v ?? "").trim().toUpperCase();
+  // Normaliza versiones para comparar API / UI / guardado
+  const normalizeVersion = (v: string) => {
+    const up = String(v ?? "")
+      .trim()
+      .toUpperCase();
 
-  // Unificamos Reina Valera 1960
-  if (up === "RVR1960") return "RVR60";
-  if (up === "RV1960") return "RVR60";     // <-- ESTA ES LA CLAVE
-  if (up === "RV 1960") return "RVR60";
-  if (up === "RVR 1960") return "RVR60";
+    // Unificamos Reina Valera 1960
+    if (up === "RVR1960") return "RVR60";
+    if (up === "RV1960") return "RVR60"; // <-- ESTA ES LA CLAVE
+    if (up === "RV 1960") return "RVR60";
+    if (up === "RVR 1960") return "RVR60";
 
-  return up;
-};
-
-
+    return up;
+  };
 
   // =======================
   // Version switch (chips)
@@ -1028,7 +1030,10 @@ const normalizeVersion = (v: string) => {
     if (!lastChapterRef) return;
 
     // 1) Traer el capítulo en la versión seleccionada
- const result = await fetchVerseFromAPI(lastChapterRef, normalizeVersion(versionKey));
+    const result = await fetchVerseFromAPI(
+      lastChapterRef,
+      normalizeVersion(versionKey)
+    );
 
     if (!result) return;
 
@@ -1065,42 +1070,36 @@ const normalizeVersion = (v: string) => {
       verses,
       isJesusWords: false,
     };
-const allowed = getVersionsByLanguage(language);
-const allowedUpper = allowed.map(normalizeVersion);
-
-
+    const allowed = getVersionsByLanguage(language);
+    const allowedUpper = allowed.map(normalizeVersion);
 
     // 4) Mantener botones de versiones (sin texto) usando availableVersionKeys
-const versionButtons = (availableVersionKeys || [])
-  .filter((vk) => {
-    const up = normalizeVersion(String(vk));
-    const current = normalizeVersion(String(versionKey));
+    const versionButtons = (availableVersionKeys || [])
+      .filter((vk) => {
+        const up = normalizeVersion(String(vk));
+        const current = normalizeVersion(String(versionKey));
 
-    // no mostrar chip de la versión que ya está seleccionada
-    if (up === current) return false;
+        // no mostrar chip de la versión que ya está seleccionada
+        if (up === current) return false;
 
-    // si no hay lista (por alguna razón), mostramos todo lo demás
-    if (allowedUpper.length === 0) return true;
+        // si no hay lista (por alguna razón), mostramos todo lo demás
+        if (allowedUpper.length === 0) return true;
 
-    // mostrar solo las permitidas por idioma
-    return allowedUpper.includes(up);
-  })
-  .map((vk) => ({
-    id: `${ref}-${vk}`,
-    reference: ref,
-   version: normalizeVersion(String(vk)),
+        // mostrar solo las permitidas por idioma
+        return allowedUpper.includes(up);
+      })
+      .map((vk) => ({
+        id: `${ref}-${vk}`,
+        reference: ref,
+        version: normalizeVersion(String(vk)),
 
-
-    text: "",
-    verses: [],
-    isJesusWords: false,
-  }));
-
+        text: "",
+        verses: [],
+        isJesusWords: false,
+      }));
 
     setSelectedVersion(String(versionKey)); // para que quede “seleccionada”
     setVersionSuggestions([chapterSuggestion, ...versionButtons]);
- 
-
   };
 
   const handleAddPassage = async (
@@ -1110,21 +1109,19 @@ const versionButtons = (availableVersionKeys || [])
     const ref = (refOverride ?? newPassageRef).trim();
     if (!ref) return;
 
-const chosenVersionNorm = normalizeVersion(
-  versionOverride || selectedVersion || preferredVersion || "RVR60"
-);
-
-
+    const chosenVersionNorm = normalizeVersion(
+      versionOverride || selectedVersion || preferredVersion || "RVR60"
+    );
 
     try {
       setAddingPassage(true);
       setPassageError(null);
 
       // Usamos el MISMO helper que SmartBible
-    const referenceData: BibleSearchResult | null =
-  await fetchVerseFromAPI(ref, chosenVersionNorm);
-
-
+      const referenceData: BibleSearchResult | null = await fetchVerseFromAPI(
+        ref,
+        chosenVersionNorm
+      );
 
       if (!referenceData || !referenceData.versions) {
         setPassageError("No se encontró este pasaje.");
@@ -1132,33 +1129,29 @@ const chosenVersionNorm = normalizeVersion(
       }
 
       // 1) sacar todas las versiones disponibles que devolvió la API
-     const apiVersions = Object.keys(referenceData.versions || {});
-const apiNormalized = apiVersions.map(normalizeVersion);
+      const apiVersions = Object.keys(referenceData.versions || {});
+      const apiNormalized = apiVersions.map(normalizeVersion);
 
-// ✅ Si el pasaje base ya está en RVR60 pero la API no lo trae en "versions", lo agregamos
-if (!apiNormalized.includes("RVR60")) {
-}
+      // ✅ Si el pasaje base ya está en RVR60 pero la API no lo trae en "versions", lo agregamos
+      if (!apiNormalized.includes("RVR60")) {
+      }
 
+      // 1) Versiones permitidas por idioma (fuente única)
+      const allowed = getVersionsByLanguage(language);
+      const allowedNorm = allowed.map(normalizeVersion);
 
-// 1) Versiones permitidas por idioma (fuente única)
-const allowed = getVersionsByLanguage(language);
-const allowedNorm = allowed.map(normalizeVersion);
+      // 2) Elegir versión:
+      // - preferredVersion si es permitida y existe en la API
+      // - si no, la primera permitida que exista en la API
+      // - si no, fallback a la primera que venga de la API o RVR60
+      const preferredNorm = normalizeVersion(preferredVersion);
 
-// 2) Elegir versión:
-// - preferredVersion si es permitida y existe en la API
-// - si no, la primera permitida que exista en la API
-// - si no, fallback a la primera que venga de la API o RVR60
-const preferredNorm = normalizeVersion(preferredVersion);
+      // 3) referenceData.versions usa keys originales: buscamos la key real equivalente
+      const chosenKey =
+        apiVersions.find((k) => normalizeVersion(k) === chosenVersionNorm) ||
+        chosenVersionNorm;
 
-
-
-// 3) referenceData.versions usa keys originales: buscamos la key real equivalente
-const chosenKey =
-  apiVersions.find((k) => normalizeVersion(k) === chosenVersionNorm) || chosenVersionNorm;
-
-
-const versesList = referenceData.versions[chosenKey] as BibleVerse[];
-
+      const versesList = referenceData.versions[chosenKey] as BibleVerse[];
 
       if (!versesList || versesList.length === 0) {
         setPassageError("No se encontraron versículos para este pasaje.");
@@ -1174,20 +1167,18 @@ const versesList = referenceData.versions[chosenKey] as BibleVerse[];
       const reference = (refOverride ?? ref ?? referenceData?.ref ?? "").trim();
 
       // ✅ Guardar el pasaje con texto completo (para que no se pierda al reabrir)
-      
 
-const newVerse = {
-  ref: reference,
-  text: fullText,
-  version: chosenVersionNorm,
-};
+      const newVerse = {
+        ref: reference,
+        text: fullText,
+        version: chosenVersionNorm,
+      };
 
-   setEditedSermon((prev: any) => ({
-  ...prev,
-  verses: [...(prev.verses || []), newVerse],
-  keyPassages: [...(prev.keyPassages || []), newPassage], // ✅ guarda el objeto completo
-}));
-
+      setEditedSermon((prev: any) => ({
+        ...prev,
+        verses: [...(prev.verses || []), newVerse],
+        keyPassages: [...(prev.keyPassages || []), newPassage], // ✅ guarda el objeto completo
+      }));
 
       // 6) Crear el pasaje clave que se guarda en el sermón
       const newPassage: KeyPassage = {
@@ -1221,34 +1212,30 @@ const newVerse = {
   const handleCopyPassage = async (p: any) => {
     const reference =
       typeof p === "string" ? p : p.reference ?? p.ref ?? p.verseRef ?? "";
-const referenceCap = capitalizeRef(reference);
+    const referenceCap = capitalizeRef(reference);
 
     const version =
       typeof p === "string" ? "" : p.version ?? p.versionOverride ?? "";
 
-   // normalizador para evitar problemas de mayúsculas / espacios
-const norm = (s: any) => String(s ?? "").toLowerCase().trim();
+    // normalizador para evitar problemas de mayúsculas / espacios
+    const norm = (s: any) =>
+      String(s ?? "")
+        .toLowerCase()
+        .trim();
 
-// 1) si es string, buscamos el texto en editedSermon.verses (normalizado)
-// 2) si es objeto, usamos p.text
-const found =
-  typeof p === "string"
-    ? (editedSermon.verses || []).find(
-        (v: any) => norm(v.ref) === norm(p)
-      )
-    : p;
+    // 1) si es string, buscamos el texto en editedSermon.verses (normalizado)
+    // 2) si es objeto, usamos p.text
+    const found =
+      typeof p === "string"
+        ? (editedSermon.verses || []).find((v: any) => norm(v.ref) === norm(p))
+        : p;
 
-const text = (found?.text ?? found?.verseText ?? "").trim();
+    const text = (found?.text ?? found?.verseText ?? "").trim();
 
+    const header = version ? `${referenceCap} (${version})` : referenceCap;
 
-
-   const header = version
-  ? `${referenceCap} (${version})`
-  : referenceCap;
-
-// 👉 NO agrega "—" si no hay texto
-const textToCopy = text ? `${header} — ${text}` : header;
-
+    // 👉 NO agrega "—" si no hay texto
+    const textToCopy = text ? `${header} — ${text}` : header;
 
     try {
       await navigator.clipboard.writeText(textToCopy);
@@ -1268,9 +1255,9 @@ const textToCopy = text ? `${header} — ${text}` : header;
     setEditedSermon((prev: any) => ({
       ...prev,
       keyPassages: (prev.keyPassages || []).filter((p: any) => {
-  const ref = typeof p === "string" ? p : (p?.reference ?? p?.ref ?? "");
-  return ref !== pid;
-}),
+        const ref = typeof p === "string" ? p : p?.reference ?? p?.ref ?? "";
+        return ref !== pid;
+      }),
 
       verses: (prev.verses || []).filter(
         (v: any) => (v.ref ?? v.reference) !== pid
@@ -1294,93 +1281,97 @@ const textToCopy = text ? `${header} — ${text}` : header;
   // Referencia al textarea para poder saber qué texto está seleccionado
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-const applyFormat = (type: "bold" | "italic" | "h1" | "list" | "quote" | "quotes" | "slash"| "highlight") => {
+  const applyFormat = (
+    type:
+      | "bold"
+      | "italic"
+      | "h1"
+      | "list"
+      | "quote"
+      | "quotes"
+      | "slash"
+      | "highlight"
+  ) => {
+    const ta = notesRef.current;
+    if (!ta) return;
 
+    const value = ta.value ?? "";
+    const start = ta.selectionStart ?? 0;
+    const end = ta.selectionEnd ?? 0;
 
+    const selected = value.slice(start, end);
+    const before = value.slice(0, start);
+    const after = value.slice(end);
 
-  const ta = notesRef.current;
-  if (!ta) return;
+    const wrap = (left: string, right = left) => {
+      const insert = `${left}${selected || ""}${right}`;
+      const nextValue = `${before}${insert}${after}`;
 
-  const value = ta.value ?? "";
-  const start = ta.selectionStart ?? 0;
-  const end = ta.selectionEnd ?? 0;
+      // actualiza estado usando tu handler existente
+      handleNotesChange({
+        target: { value: nextValue },
+      } as React.ChangeEvent<HTMLTextAreaElement>);
 
-  const selected = value.slice(start, end);
-  const before = value.slice(0, start);
-  const after = value.slice(end);
+      // volver foco + posicionar cursor
+      requestAnimationFrame(() => {
+        ta.focus();
+        if (selected) {
+          ta.setSelectionRange(start + left.length, end + left.length);
+        } else {
+          // si no había selección, coloca cursor en medio
+          const pos = start + left.length;
+          ta.setSelectionRange(pos, pos);
+        }
+      });
+    };
 
-  const wrap = (left: string, right = left) => {
-    const insert = `${left}${selected || ""}${right}`;
-    const nextValue = `${before}${insert}${after}`;
+    const prefixLines = (prefix: string) => {
+      const block = selected || "";
+      const lines = block.length ? block.split("\n") : [""];
+      const withPrefix = lines.map((l) => `${prefix}${l}`).join("\n");
 
-    // actualiza estado usando tu handler existente
-    handleNotesChange({
-      target: { value: nextValue },
-    } as React.ChangeEvent<HTMLTextAreaElement>);
+      const insert = withPrefix;
+      const nextValue = `${before}${insert}${after}`;
 
-    // volver foco + posicionar cursor
-    requestAnimationFrame(() => {
-      ta.focus();
-      if (selected) {
-        ta.setSelectionRange(start + left.length, end + left.length);
-      } else {
-        // si no había selección, coloca cursor en medio
-        const pos = start + left.length;
-        ta.setSelectionRange(pos, pos);
-      }
-    });
-  };
+      handleNotesChange({
+        target: { value: nextValue },
+      } as React.ChangeEvent<HTMLTextAreaElement>);
 
-  const prefixLines = (prefix: string) => {
-    const block = selected || "";
-    const lines = block.length ? block.split("\n") : [""];
-    const withPrefix = lines.map((l) => `${prefix}${l}`).join("\n");
+      requestAnimationFrame(() => {
+        ta.focus();
+        const newStart = start;
+        const newEnd = start + insert.length;
+        ta.setSelectionRange(newStart, newEnd);
+      });
+    };
 
-    const insert = withPrefix;
-    const nextValue = `${before}${insert}${after}`;
-
-    handleNotesChange({
-      target: { value: nextValue },
-    } as React.ChangeEvent<HTMLTextAreaElement>);
-
-    requestAnimationFrame(() => {
-      ta.focus();
-      const newStart = start;
-      const newEnd = start + insert.length;
-      ta.setSelectionRange(newStart, newEnd);
-    });
-  };
-
-  switch (type) {
-    case "bold":
-      wrap("**");
-      break;
-    case "italic":
-      wrap("*");
-      break;
-    case "h1":
-      prefixLines("# ");
-      break;
-    case "list":
-      prefixLines("- ");
-      break;
-    case "quote":
-      prefixLines("> ");
-      break;
+    switch (type) {
+      case "bold":
+        wrap("**");
+        break;
+      case "italic":
+        wrap("*");
+        break;
+      case "h1":
+        prefixLines("# ");
+        break;
+      case "list":
+        prefixLines("- ");
+        break;
+      case "quote":
+        prefixLines("> ");
+        break;
       case "quotes":
-  wrap("“", "”");
-  break;
-  case "slash":
-  wrap("/");
-  break;
-  case "highlight":
-  wrap("==", "==");
-  break;
-
-
-
-  }
-};
+        wrap("“", "”");
+        break;
+      case "slash":
+        wrap("/");
+        break;
+      case "highlight":
+        wrap("==", "==");
+        break;
+    }
+  };
 
   // Cuando cambian las notas
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -1390,102 +1381,99 @@ const applyFormat = (type: "bold" | "italic" | "h1" | "list" | "quote" | "quotes
       notes: value,
     }));
   };
-const handleNotesKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-  // TAB = autocompletado inteligente (# intro, # texto, etc.)
-if (e.key === "Tab" && !e.ctrlKey && !e.metaKey && !e.altKey) {
-  const didExpand = tryExpandSnippetAtCursor();
-  if (didExpand) {
-    e.preventDefault();
-    return;
-  }
-}
+  const handleNotesKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // TAB = autocompletado inteligente (# intro, # texto, etc.)
+    if (e.key === "Tab" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const didExpand = tryExpandSnippetAtCursor();
+      if (didExpand) {
+        e.preventDefault();
+        return;
+      }
+    }
 
-  const isCtrl = e.ctrlKey || e.metaKey; // Ctrl (Windows) / Cmd (Mac)
-  if (!isCtrl) return;
-  
-if (isCtrl && e.shiftKey && e.key.toLowerCase() === "h") {
-  e.preventDefault();
-  applyFormat("highlight");
-  return;
-}
-  switch (e.key.toLowerCase()) {
-    case "b":
+    const isCtrl = e.ctrlKey || e.metaKey; // Ctrl (Windows) / Cmd (Mac)
+    if (!isCtrl) return;
+
+    if (isCtrl && e.shiftKey && e.key.toLowerCase() === "h") {
       e.preventDefault();
-      applyFormat("bold");
-      break;
+      applyFormat("highlight");
+      return;
+    }
+    switch (e.key.toLowerCase()) {
+      case "b":
+        e.preventDefault();
+        applyFormat("bold");
+        break;
 
-    case "/":
-      e.preventDefault();
-      applyFormat("slash");
-      break;
+      case "/":
+        e.preventDefault();
+        applyFormat("slash");
+        break;
 
-    case "h":
-      e.preventDefault();
-      applyFormat("h1");
-      break;
+      case "h":
+        e.preventDefault();
+        applyFormat("h1");
+        break;
 
-    case "l":
-      e.preventDefault();
-      applyFormat("list");
-      break;
+      case "l":
+        e.preventDefault();
+        applyFormat("list");
+        break;
 
-    case "q":
-      e.preventDefault();
-      applyFormat("quote");
-      break;
+      case "q":
+        e.preventDefault();
+        applyFormat("quote");
+        break;
 
-    default:
-      break;
-  }
-};
+      default:
+        break;
+    }
+  };
 
-// 👇 AQUÍ VA SNIPPETS
-const SNIPPETS: Record<string, string> = {
-  "# intro": "# Introducción\n\n",
-  "# texto": "# Texto base\n\n",
-  "# puntos": "# Puntos principales\n- \n- \n- \n\n",
-  "# aplicacion": "# Aplicación\n\n",
-  "# conclusion": "# Conclusión\n\n",
-  "# oracion": "# Oración\n\n",
-  "# notas": "# Notas\n\n",
-};
-const tryExpandSnippetAtCursor = () => {
-  const ta = notesRef.current;
-  if (!ta) return false;
+  // 👇 AQUÍ VA SNIPPETS
+  const SNIPPETS: Record<string, string> = {
+    "# intro": "# Introducción\n\n",
+    "# texto": "# Texto base\n\n",
+    "# puntos": "# Puntos principales\n- \n- \n- \n\n",
+    "# aplicacion": "# Aplicación\n\n",
+    "# conclusion": "# Conclusión\n\n",
+    "# oracion": "# Oración\n\n",
+    "# notas": "# Notas\n\n",
+  };
+  const tryExpandSnippetAtCursor = () => {
+    const ta = notesRef.current;
+    if (!ta) return false;
 
-  const value = ta.value ?? "";
-  const cursor = ta.selectionStart ?? 0;
+    const value = ta.value ?? "";
+    const cursor = ta.selectionStart ?? 0;
 
-  // inicio y fin de la línea actual
-  const lineStart = value.lastIndexOf("\n", cursor - 1) + 1;
-  const lineEnd = value.indexOf("\n", cursor);
-  const end = lineEnd === -1 ? value.length : lineEnd;
+    // inicio y fin de la línea actual
+    const lineStart = value.lastIndexOf("\n", cursor - 1) + 1;
+    const lineEnd = value.indexOf("\n", cursor);
+    const end = lineEnd === -1 ? value.length : lineEnd;
 
-  const currentLine = value
-    .slice(lineStart, end)
-    .trim()
-    .toLowerCase();
+    const currentLine = value.slice(lineStart, end).trim().toLowerCase();
 
-  const expansion = SNIPPETS[currentLine];
-  if (!expansion) return false;
+    const expansion = SNIPPETS[currentLine];
+    if (!expansion) return false;
 
-  const before = value.slice(0, lineStart);
-  const after = value.slice(end);
+    const before = value.slice(0, lineStart);
+    const after = value.slice(end);
 
-  const nextValue = `${before}${expansion}${after}`;
+    const nextValue = `${before}${expansion}${after}`;
 
-  handleNotesChange(
-    { target: { value: nextValue } } as React.ChangeEvent<HTMLTextAreaElement>
-  );
+    handleNotesChange({
+      target: { value: nextValue },
+    } as React.ChangeEvent<HTMLTextAreaElement>);
 
-  requestAnimationFrame(() => {
-    ta.focus();
-    const pos = lineStart + expansion.length;
-    ta.setSelectionRange(pos, pos);
-  });
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = lineStart + expansion.length;
+      ta.setSelectionRange(pos, pos);
+    });
 
-  return true;
-};
+    return true;
+  };
 
   // Tipos de formato que vamos a aplicar
   type NoteFormat = "bold" | "italic";
@@ -1580,36 +1568,34 @@ const tryExpandSnippetAtCursor = () => {
   const charCount = notesText.length;
 
   const exportNotesPdf = () => {
-  const escapeHtml = (s: string) =>
-    (s ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+    const escapeHtml = (s: string) =>
+      (s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 
-  const title = escapeHtml((editedSermon.title ?? "").trim() || "Sermón");
-  const preacher = escapeHtml((editedSermon.preacher ?? "").trim());
-  const date = escapeHtml(
-  formatYMDForUI(
-    normalizeToLocalYMD(editedSermon.date),
-    language === "en" ? "en-US" : language === "pt" ? "pt-BR" : "es-US"
-  )
-);
+    const title = escapeHtml((editedSermon.title ?? "").trim() || "Sermón");
+    const preacher = escapeHtml((editedSermon.preacher ?? "").trim());
+    const date = escapeHtml(
+      formatYMDForUI(
+        normalizeToLocalYMD(editedSermon.date),
+        language === "en" ? "en-US" : language === "pt" ? "pt-BR" : "es-US"
+      )
+    );
 
-  const notes = escapeHtml(String(editedSermon.notes ?? ""));
+    const notes = escapeHtml(String(editedSermon.notes ?? ""));
 
-const passagesHtml =
-  keyPassages.length > 0
-    ? `
+    const passagesHtml =
+      keyPassages.length > 0
+        ? `
       <ul class="list">
         ${keyPassages
           .map((p: any) => {
             // 1) Label bonito (Lucas 1:1)
             const rawLabel =
-              typeof p === "string"
-                ? p
-                : p?.reference ?? getPassageLabel(p);
+              typeof p === "string" ? p : p?.reference ?? getPassageLabel(p);
 
             const niceLabel = String(rawLabel || "")
               .trim()
@@ -1650,13 +1636,13 @@ const passagesHtml =
           .join("")}
       </ul>
     `
-    : `<div class="muted">${escapeHtml(
-        String(t("no_passages" as any))
-      )}</div>`;
+        : `<div class="muted">${escapeHtml(
+            String(t("no_passages" as any))
+          )}</div>`;
 
-const termsHtml =
-  savedWords.length > 0
-    ? `<ul class="list">
+    const termsHtml =
+      savedWords.length > 0
+        ? `<ul class="list">
         ${savedWords
           .map((w) => {
             const term = escapeHtml(String(w.term || ""));
@@ -1664,7 +1650,7 @@ const termsHtml =
 
             // limpia markdown y saltos raros
             const cleanedDef = rawDef
-              .replace(/\*\*/g, "")     // quita ** bold
+              .replace(/\*\*/g, "") // quita ** bold
               .replace(/\r?\n{3,}/g, "\n\n")
               .trim();
 
@@ -1679,11 +1665,11 @@ const termsHtml =
           })
           .join("")}
       </ul>`
-    : `<div class="muted">${escapeHtml(String(t("defined_terms_empty" as any)))}</div>`;
+        : `<div class="muted">${escapeHtml(
+            String(t("defined_terms_empty" as any))
+          )}</div>`;
 
-
-
-  const html = `
+    const html = `
 <!doctype html>
 <html>
 <head>
@@ -1727,8 +1713,20 @@ const termsHtml =
   <div class="header">
     <h1>${title}</h1>
     <div class="meta">
-      ${preacher ? `<div class="pill">${escapeHtml(String(t("preacher" as any)))}: ${preacher}</div>` : ""}
-      ${date ? `<div class="pill">${escapeHtml(String(t("date" as any)))}: ${date}</div>` : ""}
+      ${
+        preacher
+          ? `<div class="pill">${escapeHtml(
+              String(t("preacher" as any))
+            )}: ${preacher}</div>`
+          : ""
+      }
+      ${
+        date
+          ? `<div class="pill">${escapeHtml(
+              String(t("date" as any))
+            )}: ${date}</div>`
+          : ""
+      }
     </div>
   </div>
 
@@ -1750,19 +1748,18 @@ ${termsHtml}
 
 </html>`;
 
-  const w = window.open("", "_blank");
-  if (!w) return;
+    const w = window.open("", "_blank");
+    if (!w) return;
 
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-  w.focus();
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
 
-  setTimeout(() => {
-    w.print();
-  }, 250);
-};
-
+    setTimeout(() => {
+      w.print();
+    }, 250);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 transition-colors duration-200">
@@ -1800,7 +1797,6 @@ ${termsHtml}
           <input
             type="date"
             value={normalizeToLocalYMD(editedSermon.date)}
-
             onChange={(e) =>
               setEditedSermon((prev) => ({ ...prev, date: e.target.value }))
             }
@@ -1928,18 +1924,17 @@ ${termsHtml}
                     {chapterSuggestions.map((s) => (
                       <div key={`${s.reference}-${s.version}`} className="mb-3">
                         <span className="font-medium capitalize flex items-center gap-2">
-  {s.reference}
+                          {s.reference}
 
-  <span className="text-[10px] px-2 py-[1px] rounded-full border border-gray-300 text-gray-600">
-    {String(
-      (s as any).version ||
-      selectedVersion ||
-      preferredVersion ||
-      "RVR60"
-    ).toUpperCase()}
-  </span>
-</span>
-
+                          <span className="text-[10px] px-2 py-[1px] rounded-full border border-gray-300 text-gray-600">
+                            {String(
+                              (s as any).version ||
+                                selectedVersion ||
+                                preferredVersion ||
+                                "RVR60"
+                            ).toUpperCase()}
+                          </span>
+                        </span>
 
                         <div className="mt-2 space-y-1 text-xs text-gray-700">
                           {(Array.isArray(s.verses) ? s.verses : []).map(
@@ -1990,25 +1985,21 @@ ${termsHtml}
                             key={`btn-${s.version}`}
                             type="button"
                             className={`px-3 py-1 rounded-full border text-xs transition
-  ${selectedVersion?.toUpperCase() === String(s.version).toUpperCase()
-    ? "bg-blue-600 text-white border-blue-600"
-    : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50"
+  ${
+    selectedVersion?.toUpperCase() === String(s.version).toUpperCase()
+      ? "bg-blue-600 text-white border-blue-600"
+      : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50"
   }`}
-
-                           
-                        onClick={() => {
-  const v = normalizeVersion(String(s.version));
-  setSelectedVersion(v);
-  loadChapterInVersion(v);
-}}
-
-
+                            onClick={() => {
+                              const v = normalizeVersion(String(s.version));
+                              setSelectedVersion(v);
+                              loadChapterInVersion(v);
+                            }}
                             title={`Cambiar a ${String(s.version)}`}
                           >
                             {String(s.version).toUpperCase()}
                           </button>
                         ))}
-
                       </div>
                     )}
                   </div>
@@ -2031,19 +2022,18 @@ ${termsHtml}
                   ? p
                   : (p as any).reference ?? getPassageLabel(p);
 
-          const verseObj =
-  typeof p === "string"
-    ? (editedSermon.verses || []).find((v: any) =>
-  v.ref?.toLowerCase().trim() === String(p).toLowerCase().trim()
-)
+              const verseObj =
+                typeof p === "string"
+                  ? (editedSermon.verses || []).find(
+                      (v: any) =>
+                        v.ref?.toLowerCase().trim() ===
+                        String(p).toLowerCase().trim()
+                    )
+                  : (p as any);
 
-    : (p as any);
+              const text = verseObj?.text || verseObj?.verseText || "";
 
-const text = verseObj?.text || verseObj?.verseText || "";
-
-
-           const version = verseObj?.version ?? "";
-
+              const version = verseObj?.version ?? "";
 
               return (
                 <div
@@ -2077,19 +2067,25 @@ const text = verseObj?.text || verseObj?.verseText || "";
                       className="text-xs px-3 py-1 rounded-full border border-blue-200 text-blue-700 hover:bg-blue-50"
                     >
                       <svg
-  xmlns="http://www.w3.org/2000/svg"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  strokeWidth="2"
-  strokeLinecap="round"
-  strokeLinejoin="round"
-  className="w-5 h-5"
->
-  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-</svg>
-
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="w-5 h-5"
+                      >
+                        <rect
+                          x="9"
+                          y="9"
+                          width="13"
+                          height="13"
+                          rx="2"
+                          ry="2"
+                        />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      </svg>
                     </button>
 
                     <button
@@ -2098,22 +2094,21 @@ const text = verseObj?.text || verseObj?.verseText || "";
                       className="text-xs px-3 py-1 rounded-full border border-red-200 text-red-600 hover:bg-red-50"
                     >
                       <svg
-  xmlns="http://www.w3.org/2000/svg"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  strokeWidth="2"
-  strokeLinecap="round"
-  strokeLinejoin="round"
-  className="w-5 h-5"
->
-  <path d="M3 6h18" />
-  <path d="M8 6V4h8v2" />
-  <path d="M6 6l1 16h10l1-16" />
-  <path d="M10 11v6" />
-  <path d="M14 11v6" />
-</svg>
-
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="w-5 h-5"
+                      >
+                        <path d="M3 6h18" />
+                        <path d="M8 6V4h8v2" />
+                        <path d="M6 6l1 16h10l1-16" />
+                        <path d="M10 11v6" />
+                        <path d="M14 11v6" />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -2123,144 +2118,136 @@ const text = verseObj?.text || verseObj?.verseText || "";
 
           {/* Editor de notas sencillo */}
           <div className="mt-4">
-     <label className="block text-base font-semibold mb-2 text-gray-900">
-  {t("notes_title")}
-</label>
+            <label className="block text-base font-semibold mb-2 text-gray-900">
+              {t("notes_title")}
+            </label>
 
-
-
-<div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-
-  <button
-    type="button"
-    onClick={() => applyFormat("bold")}
-    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-900
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+              <button
+                type="button"
+                onClick={() => applyFormat("bold")}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-900
            hover:bg-gray-100 active:scale-[0.98]
            focus:outline-none focus:ring-2 focus:ring-blue-500
            dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+                title={`${t("fmt_bold" as any)} (Ctrl+B)`}
+              >
+                *
+              </button>
 
-    title={`${t("fmt_bold" as any)} (Ctrl+B)`}
-
-
-  >
-    *
-  </button>
-
-  <button
-  type="button"
-  onClick={() => applyFormat("slash")}
-
-  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-900
+              <button
+                type="button"
+                onClick={() => applyFormat("slash")}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-900
            hover:bg-gray-100 active:scale-[0.98]
            focus:outline-none focus:ring-2 focus:ring-blue-500
            dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
-title={`${t("fmt_slash" as any)} (Ctrl+/)`}
+                title={`${t("fmt_slash" as any)} (Ctrl+/)`}
+              >
+                /
+              </button>
 
->
-  /
-</button>
+              <div className="mx-1 h-6 w-px bg-gray-200 dark:bg-gray-700" />
 
-<div className="mx-1 h-6 w-px bg-gray-200 dark:bg-gray-700" />
-
-  <button
-    type="button"
-    onClick={() => applyFormat("h1")}
-    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-900
+              <button
+                type="button"
+                onClick={() => applyFormat("h1")}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-900
            hover:bg-gray-100 active:scale-[0.98]
            focus:outline-none focus:ring-2 focus:ring-blue-500
            dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+                title={`${t("fmt_h1" as any)} (Ctrl+H)`}
+              >
+                #
+              </button>
 
-
-    title={`${t("fmt_h1" as any)} (Ctrl+H)`}
-
-
-  >
-    #
-  </button>
-
-  <button
-    type="button"
-    onClick={() => applyFormat("list")}
-   className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-900
+              <button
+                type="button"
+                onClick={() => applyFormat("list")}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-900
            hover:bg-gray-100 active:scale-[0.98]
            focus:outline-none focus:ring-2 focus:ring-blue-500
            dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+                title={`${t("fmt_list" as any)} (Ctrl+L)`}
+              >
+                -
+              </button>
+              <div className="mx-1 h-6 w-px bg-gray-200 dark:bg-gray-700" />
 
-
-    title={`${t("fmt_list" as any)} (Ctrl+L)`}
-
-
-  >
-    -
-  </button>
-<div className="mx-1 h-6 w-px bg-gray-200 dark:bg-gray-700" />
-
-  <button
-    type="button"
-    onClick={() => applyFormat("quotes")}
-    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-900
+              <button
+                type="button"
+                onClick={() => applyFormat("quotes")}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-900
            hover:bg-gray-100 active:scale-[0.98]
            focus:outline-none focus:ring-2 focus:ring-blue-500
            dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
-
-
-    title={`${t("fmt_quote" as any)} (Ctrl+Q)`}
-
-
-  >
-    ❝
-  </button>
-  <button
-  type="button"
-  onClick={() => applyFormat("highlight")}
-  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-yellow-200 bg-yellow-50 text-sm font-semibold text-yellow-800
+                title={`${t("fmt_quote" as any)} (Ctrl+Q)`}
+              >
+                ❝
+              </button>
+              <button
+                type="button"
+                onClick={() => applyFormat("highlight")}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-yellow-200 bg-yellow-50 text-sm font-semibold text-yellow-800
            hover:bg-yellow-100 active:scale-[0.98]
            focus:outline-none focus:ring-2 focus:ring-blue-500
            dark:border-yellow-900/50 dark:bg-yellow-900/20 dark:text-yellow-200 dark:hover:bg-yellow-900/30"
-title={`${t("fmt_highlight" as any)} (Ctrl+Shift+H)`}
+                title={`${t("fmt_highlight" as any)} (Ctrl+Shift+H)`}
+              >
+                🖍
+              </button>
 
->
-  🖍
-</button>
-
-<button
-  type="button"
-  onClick={() => setShowSnippetsHelp((v) => !v)}
-  className="rounded-md border px-2 py-1 text-xs font-semibold
+              <button
+                type="button"
+                onClick={() => setShowSnippetsHelp((v) => !v)}
+                className="rounded-md border px-2 py-1 text-xs font-semibold
              hover:bg-gray-100 dark:hover:bg-gray-800"
-  title={`${t("snippets_help" as any)}`}
->
-  ?
-</button>
+                title={`${t("snippets_help" as any)}`}
+              >
+                ?
+              </button>
+            </div>
+            {showSnippetsHelp && (
+              <div
+                className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm
+                  dark:border-gray-700 dark:bg-gray-900"
+              >
+                <div className="mb-2 font-semibold">
+                  {t("snippets_title" as any)}
+                </div>
 
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>
+                    <code># intro</code> → {t("snip_intro" as any)}
+                  </li>
+                  <li>
+                    <code># texto</code> → {t("snip_texto" as any)}
+                  </li>
+                  <li>
+                    <code># puntos</code> → {t("snip_puntos" as any)}
+                  </li>
+                  <li>
+                    <code># aplicacion</code> → {t("snip_aplicacion" as any)}
+                  </li>
+                  <li>
+                    <code># conclusion</code> → {t("snip_conclusion" as any)}
+                  </li>
+                  <li>
+                    <code># oracion</code> → {t("snip_oracion" as any)}
+                  </li>
+                  <li>
+                    <code># notas</code> → {t("snip_notas" as any)}
+                  </li>
+                </ul>
 
-
-</div>
-{showSnippetsHelp && (
-  <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm
-                  dark:border-gray-700 dark:bg-gray-900">
-    <div className="mb-2 font-semibold">
-      {t("snippets_title" as any)}
-    </div>
-
-    <ul className="list-disc pl-5 space-y-1">
-      <li><code># intro</code> → {t("snip_intro" as any)}</li>
-      <li><code># texto</code> → {t("snip_texto" as any)}</li>
-      <li><code># puntos</code> → {t("snip_puntos" as any)}</li>
-      <li><code># aplicacion</code> → {t("snip_aplicacion" as any)}</li>
-      <li><code># conclusion</code> → {t("snip_conclusion" as any)}</li>
-      <li><code># oracion</code> → {t("snip_oracion" as any)}</li>
-      <li><code># notas</code> → {t("snip_notas" as any)}</li>
-    </ul>
-
-    <div className="mt-2 text-xs text-gray-500">
-      {t("snippets_tip" as any)}
-    </div>
-  </div>
-)}
+                <div className="mt-2 text-xs text-gray-500">
+                  {t("snippets_tip" as any)}
+                </div>
+              </div>
+            )}
 
             <textarea
-            ref={notesRef}
+              ref={notesRef}
               className="w-full min-h-[220px] rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm
                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
                        dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 dark:focus:ring-blue-400
@@ -2269,8 +2256,7 @@ title={`${t("fmt_highlight" as any)} (Ctrl+Shift+H)`}
               onChange={handleNotesChange}
               onKeyDown={handleNotesKeyDown}
               placeholder={t("notes_placeholder")}
-            />       
-
+            />
 
             {/* Contador de palabras / caracteres + limpiar */}
             <div className="mt-1 flex justify-between text-xs text-gray-400">
@@ -2291,35 +2277,30 @@ title={`${t("fmt_highlight" as any)} (Ctrl+Shift+H)`}
               </button>
             </div>
           </div>
-<button
-  type="button"
-  onClick={exportNotesPdf}
-  className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium"
->
-  {t("export_pdf" as any)}
-</button>
+          <button
+            type="button"
+            onClick={exportNotesPdf}
+            className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium"
+          >
+            {t("export_pdf" as any)}
+          </button>
 
-        
           {/* Botones inferiores */}
           <div className="mt-6 flex justify-between items-end gap-4">
             {/* IZQUIERDA: Diccionario + chips */}
             <div className="flex flex-col items-start gap-2">
-
               <button
                 type="button"
                 onClick={() => setIsDictOpen(true)}
                 className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm hover:bg-gray-50"
               >
                 📘 {t("dictionary_btn")}
-
               </button>
 
               {savedWords?.length > 0 && (
                 <div className="mt-2">
                   <div className="text-sm font-semibold opacity-80 mt-2 mb-1">
-
                     {t("defined_terms")}:
-
                   </div>
 
                   <div className="flex flex-wrap gap-2">
@@ -2365,37 +2346,35 @@ title={`${t("fmt_highlight" as any)} (Ctrl+Shift+H)`}
           {isDictOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
               <div className="w-full max-w-xl rounded-2xl bg-white p-4 shadow-xl">
-               
                 {/* Header */}
-           {/* Header */}
-<div className="flex items-center justify-between">
-  <h3 className="text-lg font-semibold">
-    📘 {t("dictionary_title" as any)}
-  </h3>
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">
+                    📘 {t("dictionary_title" as any)}
+                  </h3>
 
-  <button
-    type="button"
-    onClick={() => setIsDictOpen(false)}
-    aria-label={String(t("close" as any))}
-    title={String(t("close" as any))}
-    className="p-2 rounded-full hover:bg-gray-200 text-gray-600 hover:text-red-600"
-  >
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="w-5 h-5"
-    >
-      <path d="M18 6L6 18" />
-      <path d="M6 6l12 12" />
-    </svg>
-  </button>
-</div>
-
+                  <button
+                    type="button"
+                    onClick={() => setIsDictOpen(false)}
+                    aria-label={String(t("close" as any))}
+                    title={String(t("close" as any))}
+                    className="p-2 rounded-full hover:bg-gray-200 text-gray-600 hover:text-red-600"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-5 h-5"
+                    >
+                      <path d="M18 6L6 18" />
+                      <path d="M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
 
                 {/* Buscador */}
                 <div className="mt-3 flex gap-2">
@@ -2403,7 +2382,6 @@ title={`${t("fmt_highlight" as any)} (Ctrl+Shift+H)`}
                     value={dictQuery}
                     onChange={(e) => setDictQuery(e.target.value)}
                     placeholder={t("dictionary_placeholder" as any)}
-
                     className="flex-1 rounded-lg border border-gray-300 px-3 py-2"
                   />
 
@@ -2413,8 +2391,9 @@ title={`${t("fmt_highlight" as any)} (Ctrl+Shift+H)`}
                     disabled={dictLoading || !dictQuery.trim()}
                     className="rounded-lg bg-blue-600 px-4 py-2 text-white disabled:opacity-60"
                   >
-                   {dictLoading ? t("dictionary_loading" as any) : t("dictionary_search" as any)}
-
+                    {dictLoading
+                      ? t("dictionary_loading" as any)
+                      : t("dictionary_search" as any)}
                   </button>
                 </div>
 
@@ -2458,7 +2437,6 @@ title={`${t("fmt_highlight" as any)} (Ctrl+Shift+H)`}
                     className="rounded-lg border border-gray-300 px-4 py-2 disabled:opacity-60"
                   >
                     {t("dictionary_save" as any)}
-
                   </button>
                 </div>
 
@@ -2466,13 +2444,11 @@ title={`${t("fmt_highlight" as any)} (Ctrl+Shift+H)`}
                 <div className="mt-4">
                   <div className="text-sm font-semibold">
                     {t("dictionary_saved_words" as any)}
-
                   </div>
 
                   {savedWords.length === 0 ? (
                     <p className="mt-1 text-sm text-gray-500">
                       {t("dictionary_no_words" as any)}
-
                     </p>
                   ) : (
                     <div className="mt-2 max-h-40 overflow-auto rounded-lg border border-gray-200 p-3">
@@ -2481,12 +2457,11 @@ title={`${t("fmt_highlight" as any)} (Ctrl+Shift+H)`}
                           <div className="flex items-center justify-between">
                             <div className="font-semibold">{w.term}</div>
 
-{w.definition ? (
-  <div className="text-xs text-gray-600 mt-1 whitespace-pre-line">
-    {w.definition}
-  </div>
-) : null}
-
+                            {w.definition ? (
+                              <div className="text-xs text-gray-600 mt-1 whitespace-pre-line">
+                                {w.definition}
+                              </div>
+                            ) : null}
 
                             <button
                               type="button"
@@ -2499,22 +2474,21 @@ title={`${t("fmt_highlight" as any)} (Ctrl+Shift+H)`}
                               title="Eliminar"
                             >
                               <svg
-  xmlns="http://www.w3.org/2000/svg"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  strokeWidth="2"
-  strokeLinecap="round"
-  strokeLinejoin="round"
-  className="w-4 h-4"
->
-  <path d="M3 6h18" />
-  <path d="M8 6V4h8v2" />
-  <path d="M6 6l1 16h10l1-16" />
-  <path d="M10 11v6" />
-  <path d="M14 11v6" />
-</svg>
-
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="w-4 h-4"
+                              >
+                                <path d="M3 6h18" />
+                                <path d="M8 6V4h8v2" />
+                                <path d="M6 6l1 16h10l1-16" />
+                                <path d="M10 11v6" />
+                                <path d="M14 11v6" />
+                              </svg>
                             </button>
                           </div>
 

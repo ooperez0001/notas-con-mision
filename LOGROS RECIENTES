@@ -1,0 +1,17 @@
+## ✅ 2025-12-25 — KeyPassages “fuente de verdad” + limpieza de legacy
+
+### Cambios
+- `keyPassages` pasa a ser la fuente de verdad para lo que se muestra en “Mis Sermones” (chips/badges).
+- Se evita mostrar “versículos legacy” que quedaban guardados aunque el usuario los hubiera eliminado.
+- Al guardar sermón, se persisten pasajes como objetos con:
+  - `ref` (referencia)
+  - `text` (texto del versículo)
+  - `version` (versión usada)
+- Orden de badges en “Mis Sermones” se basa en el orden real de `keyPassages` (la caja verde manda).
+- Botón eliminar en la caja verde confirmado funcionando: elimina de la lista visible y limpia el texto guardado asociado.
+
+### Verificaciones
+- UI: “Mis Sermones” muestra los pasajes correctos (sin “fantasmas”).
+- UI: En el editor, la caja verde muestra y elimina correctamente.
+- Build: `npm run build` OK.
+- Commit realizado y push OK.

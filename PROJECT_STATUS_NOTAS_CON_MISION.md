@@ -448,7 +448,155 @@ Para seguir igual de seguro:
 👉 ¿Quieres que el siguiente paso sea solo PLANEAR cómo unificar SermonEditor con la constitución (sin código todavía), o ya entramos a implementar paso a paso?
 
 Respóndeme eso y seguimos con bisturí, no con machete 💪
+----------
 
+📜 PLAN — Unificar SermonEditor con la Constitución (solo versiones)
+🎯 Objetivo
+
+En SermonEditor.tsx:
+
+✅ Fuente de verdad de versiones por idioma = getVersionsByLanguage(language)
+
+✅ preferredVersion manda (si está permitida en ese idioma)
+
+✅ referenceData.versions se usa solo como disponibilidad (validación), NO como fuente principal
+
+❌ Eliminar VERSIONS_BY_LANG local
+
+1) Fuente única de versiones (Regla principal)
+Antes (mezcla)
+
+VERSIONS_BY_LANG local
+
+Object.keys(referenceData.versions) para “decidir”
+
+Después (constitución)
+
+allowed = getVersionsByLanguage(language)
+
+selected = preferredVersion si está en allowed, si no fallback allowed[0]
+
+📌 Esto ya lo estás haciendo en tu bloque del handleAddPassage (se ve en tu foto 2):
+
+const allowed = getVersionsByLanguage(language);
+const allowedNorm = allowed.map(normalizeVersion);
+const preferredNorm = normalizeVersion(preferredVersion);
+
+
+✅ Ese bloque es buenísimo: lo convertimos en la regla estándar y la reusamos donde haga falta.
+
+2) Qué papel juega referenceData.versions (solo disponibilidad)
+
+La API devuelve algo como:
+
+const apiVersions = Object.keys(referenceData.versions || {});
+
+
+✅ Eso se queda, pero SOLO para:
+
+confirmar si la versión elegida existe en esa respuesta
+
+hacer fallback a otra que sí exista si no existe
+
+📌 Regla:
+
+Elegimos “wantedVersion” por constitución (allowed + preferred)
+
+Verificamos si esa versión está en apiVersions
+
+Si no está:
+
+elegimos la primera que sea allowed ∩ apiVersions
+
+si nada coincide, usamos fallback seguro (ej. RVR60 si está)
+
+3) Eliminar VERSIONS_BY_LANG sin romper nada
+
+En tu foto 1 aparece:
+
+const VERSIONS_BY_LANG: Record<string, string[]> = {
+  es: [...],
+  en: [...],
+  pt: ["arc"],
+};
+
+
+✅ Plan:
+
+Borrarlo
+
+Reemplazar cualquier uso de eso por:
+
+const allowedVersions = getVersionsByLanguage(language);
+
+
+📌 Si hay lógica especial tipo:
+
+if (language === "pt") setSelectedVersion("ARC");
+
+
+Eso debe migrar a la regla general:
+
+si preferredVersion no está en pt → usar allowedVersions[0]
+(y que pt tenga ARC como primera si así lo decides en bibleService)
+
+4) Un solo “resolver” de versión (para no duplicar)
+
+Creamos una mini-función local en SermonEditor (pequeña, sin UI):
+
+✅ resolveChosenVersion(...) hace:
+
+recibe language, preferredVersion, referenceData.versions
+
+devuelve chosenVersionKey (la key real que existe en referenceData.versions)
+
+Esto evita que haya 3 lugares decidiendo versiones.
+
+5) Pruebas manuales mínimas (checklist)
+
+Después del cambio, probamos 6 cosas (rápidas):
+
+ES + preferred = RVR60 → guarda pasaje con (RVR60)
+
+ES + preferred = NTV → guarda (NTV)
+
+Cambiar idioma a EN:
+
+si preferred no existe → cae a allowed[0]
+
+PT:
+
+muestra solo ARC y guarda ARC
+
+Abrir sermón viejo:
+
+sus pasajes guardados mantienen su versión (no cambia)
+
+Mis Sermones muestra versión correcta (ya lo tienes)
+
+✅ Siguiente paso
+
+Ahora que el plan está claro, pasamos a implementación paso a paso.
+
+📸 Para empezar implementación, necesito 1 cosa:
+¿Dónde más se usa VERSIONS_BY_LANG dentro de SermonEditor?
+En tu búsqueda (imagen 3) no se ve el uso directo, solo la constante.
+
+👉 Haz esto rápido en VS Code:
+
+Ctrl + F dentro de SermonEditor.tsx
+
+busca VERSIONS_BY_LANG
+y mándame foto donde aparezca cada uso (si es 1 solo, con una foto basta).
+
+Con eso te digo exactamente:
+
+qué borrar
+
+qué pegar
+
+en qué orden
+sin romper nada.
 --------------------------------------------------------------------------------------------------------------
 ## 🧹 Limpieza y consistencia de Pasajes Clave (KeyPassages)
 
