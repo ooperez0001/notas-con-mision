@@ -8,7 +8,8 @@ import {
   Language,
 } from "../types";
 import { Modal } from "./Modal";
-import { BibleDictionary } from "./BibleDictionary";
+import SmartDictionary from './SmartDictionary';
+
 import {
   fetchVerseFromAPI,
   searchByKeyword,
@@ -16,7 +17,7 @@ import {
 } from "../services/bibleService";
 import { summarizeSermon } from "../services/geminiService";
 import { translations, getTranslation } from "../services/translations";
-import { defineWordEs } from "../services/geminiService";
+
 import {
   getLocalYMD,
   normalizeToLocalYMD,
@@ -124,18 +125,9 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
     }>;
   };
 
-  const [isDictOpen, setIsDictOpen] = useState(false);
-  const [dictQuery, setDictQuery] = useState("");
-  const [dictResults, setDictResults] = useState<{
-    source: "dictionaryapi" | "wiktionary" | "gemini";
+ 
 
-    word: string;
-    lang?: string;
-    definitions: string[];
-  } | null>(null);
-
-  const [dictLoading, setDictLoading] = useState(false);
-  const [dictError, setDictError] = useState<string | null>(null);
+  
 
   const [savedWords, setSavedWords] = useState<SavedWord[]>([]);
 
@@ -517,10 +509,8 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
     return makeDictEntry(term, defs);
   }
 
-  async function fetchFromDictionaryApiEn(term: string) {
-    const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(
-      term
-    )}`;
+async function fetchFromDictionaryApi(lang: string, term: string) {
+  const url = `https://api.dictionaryapi.dev/api/v2/entries/${lang}/${encodeURIComponent(term)}`;
     const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
@@ -559,238 +549,6 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
     const first = j?.query?.search?.[0]?.title ?? null;
     return first;
   };
-
-  const handleSearchDictionary = async () => {
-    const raw = (dictQuery || "").trim();
-
-    if (!raw) return;
-
-    setDictLoading(true);
-    setDictError(null);
-    setDictResults(null);
-
-    // ✅ Si el idioma de la app NO es inglés, usamos Gemini (definición en español)
-    if (language !== "en") {
-      try {
-        const text = await defineWordEs(raw);
-        setDictResults({
-          source: "gemini",
-          lang: "Español",
-          word: raw,
-          definitions: [text],
-        });
-      } catch (e) {
-        setDictError(
-          "No se pudo generar la definición. Revisa tu conexión o tu API key."
-        );
-      } finally {
-        setDictLoading(false);
-      }
-      return; // 👈 importante: salimos aquí para no seguir con los fetch de inglés/wiktionary
-    }
-
-    // Normaliza un poco (quita espacios dobles, etc.)
-    const word = raw.replace(/\s+/g, " ").trim();
-    const safeWord = encodeURIComponent(word);
-
-    const looksEnglish = /^[a-zA-Z'-]+$/.test(word);
-    const shouldTryEnglish = language === "en" && looksEnglish;
-
-    try {
-      // =========================
-      // A) Intento 1: Inglés (dictionaryapi.dev)
-      // =========================
-      if (shouldTryEnglish) {
-        const urlEN = `https://api.dictionaryapi.dev/api/v2/entries/en/${safeWord}`;
-        const resEN = await fetch(urlEN);
-
-        if (resEN.ok) {
-          const data = await resEN.json();
-
-          const meanings = data?.[0]?.meanings ?? [];
-          const defs: string[] = [];
-
-          for (const m of meanings) {
-            const part = m?.partOfSpeech ? `${m.partOfSpeech}: ` : "";
-            const d0 = m?.definitions?.[0]?.definition;
-            if (d0) defs.push(part + d0);
-          }
-
-          if (defs.length) {
-            setDictResults({
-              source: "dictionaryapi",
-              word,
-              definitions: defs,
-            });
-            return; // 👈 se detiene aquí si encontró en inglés
-          }
-        }
-      }
-
-      // Este endpoint suele traer definiciones por idioma
-      // B) Intento 2: Wiktionary (multi-idioma) — usar SIEMPRE en.wiktionary (evita 501)
-      // === Wiktionary con resolución de título (perdon -> perdón) ===
-      const fetchWiktionary = async (term: string) => {
-        const t = encodeURIComponent(term.trim());
-        const url = `https://en.wiktionary.org/api/rest_v1/page/definition/${t}`;
-        const r = await fetch(url);
-        if (!r.ok) return null;
-        return await r.json();
-      };
-
-      const resolveWiktionaryTitle = async (q: string) => {
-        const url = `https://en.wiktionary.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
-          q
-        )}&format=json&origin=*`;
-
-        const r = await fetch(url);
-        if (!r.ok) return null;
-
-        const j = await r.json();
-        return j?.query?.search?.[0]?.title ?? null;
-      };
-
-      // 1️⃣ intento directo
-      let wdata = await fetchWiktionary(word);
-
-      // 2️⃣ si no existe, buscar título correcto (ej: perdon → perdón)
-      if (!wdata) {
-        const resolvedTitle = await resolveWiktionaryTitle(word);
-        if (resolvedTitle) {
-          wdata = await fetchWiktionary(resolvedTitle);
-        }
-      }
-
-      if (!wdata) {
-        setDictError("Palabra no encontrada");
-        return;
-      }
-
-      // Priorizamos según idioma de la app, pero leyendo desde en.wiktionary
-      const preferredLangs =
-        (language as Language) === "es"
-          ? ["Spanish", "Portuguese", "English"]
-          : (language as Language) === "pt"
-          ? ["Portuguese", "Spanish", "English"]
-          : ["English", "Spanish", "Portuguese"];
-
-      let pickedLang: string | null = null;
-
-      for (const lang of preferredLangs) {
-        if (wdata?.[lang]?.length) {
-          pickedLang = lang;
-          break;
-        }
-      }
-      if (!pickedLang) pickedLang = Object.keys(wdata || {})[0] ?? null;
-
-      if (!pickedLang) {
-        setDictError("Palabra no encontrada");
-        return;
-      }
-
-      const langsToTry =
-        (language as Language) === "es"
-          ? ["es", "pt", "en"]
-          : (language as Language) === "pt"
-          ? ["pt", "es", "en"]
-          : ["en", "es", "pt"];
-
-      const extractDefs = (langName: string, allowJunk: boolean) => {
-        const entries = wdata?.[langName] || [];
-        const defs: string[] = [];
-
-        for (const e of entries) {
-          const part = e?.partOfSpeech ? `${e.partOfSpeech}: ` : "";
-
-          const defList = Array.isArray(e?.definitions) ? e.definitions : [];
-          for (const defObj of defList) {
-            const raw = defObj?.definition;
-            const text = raw ? cleanHtmlToText(String(raw)) : "";
-            if (!text) continue;
-
-            const isJunk =
-              /^Alternative (form|spelling) of/i.test(text) ||
-              /^Alternative (form|spelling) of/i.test(
-                text.replace(/^.*?:\s*/, "")
-              );
-
-            if (allowJunk || !isJunk) {
-              defs.push(part + text);
-              break; // ✅ solo tomamos 1 definición buena por entrada
-            }
-          }
-        }
-
-        return defs;
-      };
-
-      let finalLang: string | null = null;
-      let finalDefs: string[] = [];
-
-      // 1️⃣ Primera pasada: SIN basura
-      for (const langName of langsToTry) {
-        const d = extractDefs(langName, false);
-        if (d.length) {
-          finalLang = langName;
-          finalDefs = d;
-          break;
-        }
-      }
-
-      // 2️⃣ Segunda pasada: permitir "Alternative form..." como último recurso
-      if (!finalDefs.length) {
-        for (const langName of langsToTry) {
-          const d = extractDefs(langName, true);
-          if (d.length) {
-            finalLang = langName;
-            finalDefs = d;
-            break;
-          }
-        }
-      }
-
-      if (!finalLang || !finalDefs.length) {
-        setDictError("Palabra no encontrada");
-        return;
-      }
-
-      setDictResults({
-        source: "wiktionary",
-        lang: finalLang,
-        word,
-        definitions: finalDefs,
-      });
-    } catch (err) {
-      setDictError("Error buscando la palabra. Revisa tu conexión.");
-    } finally {
-      setDictLoading(false);
-    }
-  };
-
-  function handleSaveWord() {
-    if (!dictResults?.definitions?.length) return;
-
-    const term = dictQuery.trim();
-    const definition = dictResults.definitions[0] ?? "";
-
-    if (!term || !definition) return;
-
-    setSavedWords((prev) => {
-      if (prev.some((w) => w.term.toLowerCase() === term.toLowerCase())) {
-        return prev;
-      }
-
-      return [
-        ...prev,
-        {
-          term,
-          definition,
-          createdAt: getLocalYMD(),
-        },
-      ];
-    });
-  }
 
   const scheduleSuggestionsSearch = (value: string) => {
     // limpiamos timer anterior
@@ -2288,40 +2046,19 @@ ${termsHtml}
           {/* Botones inferiores */}
           <div className="mt-6 flex justify-between items-end gap-4">
             {/* IZQUIERDA: Diccionario + chips */}
-            <div className="flex flex-col items-start gap-2">
-              <button
-                type="button"
-                onClick={() => setIsDictOpen(true)}
-                className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm hover:bg-gray-50"
-              >
-                📘 {t("dictionary_btn")}
-              </button>
+            {/* IZQUIERDA: Diccionario unificado */}
+<SmartDictionary
+  language={language}
+  savedWords={savedWords}
+  setSavedWords={setSavedWords}
+  storageKey="ncm_saved_words_sermon"
+  variant="modal"
+/>
 
-              {savedWords?.length > 0 && (
-                <div className="mt-2">
-                  <div className="text-sm font-semibold opacity-80 mt-2 mb-1">
-                    {t("defined_terms")}:
-                  </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    {savedWords.map((w) => (
-                      <button
-                        key={w.term}
-                        type="button"
-                        onClick={() => {
-                          setDictQuery(w.term);
-                          setIsDictOpen(true);
-                        }}
-                        className="px-3 py-1 rounded-full border text-sm hover:bg-gray-50"
-                        title="Ver significado"
-                      >
-                        {w.term}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+
+
+
 
             {/* DERECHA: Volver / Guardar */}
             <div className="flex justify-end gap-3">
@@ -2343,166 +2080,7 @@ ${termsHtml}
             </div>
           </div>
 
-          {isDictOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-              <div className="w-full max-w-xl rounded-2xl bg-white p-4 shadow-xl">
-                {/* Header */}
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">
-                    📘 {t("dictionary_title" as any)}
-                  </h3>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsDictOpen(false)}
-                    aria-label={String(t("close" as any))}
-                    title={String(t("close" as any))}
-                    className="p-2 rounded-full hover:bg-gray-200 text-gray-600 hover:text-red-600"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="w-5 h-5"
-                    >
-                      <path d="M18 6L6 18" />
-                      <path d="M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Buscador */}
-                <div className="mt-3 flex gap-2">
-                  <input
-                    value={dictQuery}
-                    onChange={(e) => setDictQuery(e.target.value)}
-                    placeholder={t("dictionary_placeholder" as any)}
-                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={handleSearchDictionary}
-                    disabled={dictLoading || !dictQuery.trim()}
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-white disabled:opacity-60"
-                  >
-                    {dictLoading
-                      ? t("dictionary_loading" as any)
-                      : t("dictionary_search" as any)}
-                  </button>
-                </div>
-
-                {/* Error */}
-                {dictError && (
-                  <p className="mt-2 text-sm text-red-600">{dictError}</p>
-                )}
-
-                {/* Resultados */}
-                {dictResults?.definitions?.length ? (
-                  <div className="mt-3 max-h-56 overflow-auto rounded-lg border border-gray-200 p-3">
-                    {dictResults.lang ? (
-                      <div className="mb-2 text-xs text-gray-500">
-                        Idioma:{" "}
-                        {dictResults.lang === "es"
-                          ? "Español"
-                          : dictResults.lang === "pt"
-                          ? "Portugués"
-                          : dictResults.lang === "en"
-                          ? "Inglés"
-                          : dictResults.lang}
-                      </div>
-                    ) : null}
-
-                    <ul className="list-disc pl-5 space-y-1">
-                      {dictResults.definitions.slice(0, 8).map((d, i) => (
-                        <li key={i} className="text-sm text-gray-800">
-                          {d}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-
-                {/* Guardar */}
-                <div className="mt-3 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleSaveWord}
-                    disabled={!dictResults?.definitions?.length}
-                    className="rounded-lg border border-gray-300 px-4 py-2 disabled:opacity-60"
-                  >
-                    {t("dictionary_save" as any)}
-                  </button>
-                </div>
-
-                {/* Guardadas */}
-                <div className="mt-4">
-                  <div className="text-sm font-semibold">
-                    {t("dictionary_saved_words" as any)}
-                  </div>
-
-                  {savedWords.length === 0 ? (
-                    <p className="mt-1 text-sm text-gray-500">
-                      {t("dictionary_no_words" as any)}
-                    </p>
-                  ) : (
-                    <div className="mt-2 max-h-40 overflow-auto rounded-lg border border-gray-200 p-3">
-                      {savedWords.map((w) => (
-                        <div key={w.term} className="mb-3">
-                          <div className="flex items-center justify-between">
-                            <div className="font-semibold">{w.term}</div>
-
-                            {w.definition ? (
-                              <div className="text-xs text-gray-600 mt-1 whitespace-pre-line">
-                                {w.definition}
-                              </div>
-                            ) : null}
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setSavedWords((prev) =>
-                                  prev.filter((x) => x.term !== w.term)
-                                )
-                              }
-                              className="text-red-500 hover:text-red-700"
-                              title="Eliminar"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="w-4 h-4"
-                              >
-                                <path d="M3 6h18" />
-                                <path d="M8 6V4h8v2" />
-                                <path d="M6 6l1 16h10l1-16" />
-                                <path d="M10 11v6" />
-                                <path d="M14 11v6" />
-                              </svg>
-                            </button>
-                          </div>
-
-                          <p className="text-sm text-gray-700">
-                            {w.definition}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+         
         </div>
       </div>
     </div>

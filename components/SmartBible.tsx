@@ -8,6 +8,7 @@ import { BibleSearchResult, KeywordResult, BibleVerse, UserProfile, Language } f
 import { AIAccordion } from './AIAccordion';
 import { BibleDictionary } from './BibleDictionary';
 import { translations } from '../services/translations';
+import SmartDictionary from "./SmartDictionary";
 
 
 interface SmartBibleProps {
@@ -59,6 +60,16 @@ const [selectedPassages, setSelectedPassages] = useState<any[]>([]);
   const [aiContent, setAiContent] = useState<{[key: string]: string}>({});
   const [openAIAccordions, setOpenAIAccordions] = useState<{[key: string]: boolean}>({});
   const [loadingAITab, setLoadingAITab] = useState<string | null>(null);
+ type SavedWord = {
+  term: string;
+  definition: string;
+  createdAt: string;
+};
+
+const [studyWords, setStudyWords] = useState<SavedWord[]>([]);
+
+
+
 
   const performSearch = async (searchTerm: string, versionOverride?: string) => {
   if (!searchTerm) return;
@@ -831,6 +842,29 @@ const verseOnlySuggestions = versionSuggestions.filter(
       
 {selectedPassages.length > 0 && (
   <div className="mt-4 rounded-xl border border-green-300 bg-green-50 dark:bg-green-900/20 p-3 space-y-3">
+    
+    <div className="flex items-center justify-between">
+      <div className="font-semibold text-green-800 dark:text-green-300">
+        📗 Estudio actual
+      </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          setSelectedPassages([]);
+          setStudyWords([]);
+          setQuery("");
+          setShowSuggestions(false);
+          setSuggestions([]);
+          setVersionSuggestions([]);
+        }}
+        className="text-xs px-3 py-1 rounded-lg border border-green-300 bg-white hover:bg-green-100"
+        title="Limpiar pasajes y términos del estudio"
+      >
+        🧹 Nuevo estudio
+      </button>
+    </div>
+    
     {selectedPassages.map((p, idx) => (
       <div
         key={`${p.id}-${idx}`}
@@ -988,7 +1022,19 @@ title={t["delete"] ?? "Eliminar"}
         </div>
       )}
 
-      <BibleDictionary isEmbedded={true} language={language} />
+<SmartDictionary
+  language={language}
+  savedWords={studyWords}
+  setSavedWords={setStudyWords}
+  storageKey="ncm_saved_words_smartbible"
+  variant="bar"
+  mode="sermon"
+
+/>
+
+
+
+
           
           <div>
             <div className="flex justify-between items-center mb-4">
@@ -998,7 +1044,7 @@ title={t["delete"] ?? "Eliminar"}
                 </h3>
                 {!user?.isPremium && (
                     <span className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 px-2 py-1 rounded-full font-bold border border-yellow-200 dark:border-yellow-900">
-                        {t.premium_badge}
+                        {t.premium_badge} 
                     </span>
                 )}
             </div>

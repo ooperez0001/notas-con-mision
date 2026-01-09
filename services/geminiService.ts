@@ -82,22 +82,32 @@ export const summarizeSermon = async (title: string, notes: string, verses: stri
     return "Hubo un error al generar el resumen.";
   }
 };
-export const defineWordEs = async (term: string): Promise<string> => {
+export const defineWordEs = async (
+  term: string,
+  lang: "es" | "pt" = "es"
+): Promise<string> => {
   const clean = term.trim();
-  if (!clean) return "Escribe una palabra.";
+  if (!clean) return lang === "pt" ? "Escreva uma palavra." : "Escribe una palabra.";
 
   const prompt =
-    `Define la palabra "${clean}" en español, de forma clara y corta.\n` +
-    `Devuelve:\n` +
-    `1) Tipo (sustantivo/verbo/etc.) si aplica\n` +
-    `2) Definición en 1-2 líneas\n` +
-    `3) Un ejemplo corto\n` +
-    `No traduzcas al inglés.`;
+    lang === "pt"
+      ? `Defina a palavra "${clean}" em português, de forma clara e curta.\n` +
+        `Devolva:\n` +
+        `1) Classe gramatical (substantivo/verbo/etc.) se aplicável\n` +
+        `2) Definição em 1-2 linhas\n` +
+        `3) Um exemplo curto\n` +
+        `Não traduza para o inglês.`
+      : `Define la palabra "${clean}" en español, de forma clara y corta.\n` +
+        `Devuelve:\n` +
+        `1) Tipo (sustantivo/verbo/etc.) si aplica\n` +
+        `2) Definición en 1-2 líneas\n` +
+        `3) Un ejemplo corto\n` +
+        `No traduzcas al inglés.`;
 
   const resp = await ai.models.generateContent({
     model: "gemini-2.5-flash",
     contents: prompt,
   });
 
-  return resp.text || "No pude generar la definición.";
+  return resp.text || (lang === "pt" ? "Não consegui gerar a definição." : "No pude generar la definición.");
 };
