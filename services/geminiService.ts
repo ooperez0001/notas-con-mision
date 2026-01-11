@@ -82,12 +82,41 @@ export const summarizeSermon = async (title: string, notes: string, verses: stri
     return "Hubo un error al generar el resumen.";
   }
 };
+// --- Gemini cooldown (global) ---
+// Si Gemini responde 429, pausamos llamadas por un rato para evitar spam.
+let geminiCooldownUntil = 0; // timestamp ms
+const GEMINI_COOLDOWN_MS = 90_000; // 90s (ajustable)
+
+function getGeminiCooldownRemainingMs() {
+  const remaining = geminiCooldownUntil - Date.now();
+  return remaining > 0 ? remaining : 0;
+}
+
+function activateGeminiCooldown(ms = GEMINI_COOLDOWN_MS) {
+  geminiCooldownUntil = Math.max(geminiCooldownUntil, Date.now() + ms);
+}
+
+
+function isGemini429(error: unknown) {
+  const msg = String((error as any)?.message ?? error ?? "");
+  return msg.includes("429") || msg.toLowerCase().includes("too many requests");
+}
+
 export const defineWordEs = async (
   term: string,
   lang: "es" | "pt" = "es"
 ): Promise<string> => {
   const clean = term.trim();
   if (!clean) return lang === "pt" ? "Escreva uma palavra." : "Escribe una palabra.";
+
+  // ✅ Si hay cooldown, NO llamamos a Gemini
+  const remaining = getGeminiCooldownRemainingMs();
+  if (remaining > 0) {
+    const seconds = Math.ceil(remaining / 1000);
+    return lang === "pt"
+      ? `Limite do Gemini atingido. Tente novamente em ${seconds}s.`
+      : `Límite de Gemini alcanzado. Intenta de nuevo en ${seconds}s.`;
+  }
 
   const prompt =
     lang === "pt"
@@ -104,10 +133,29 @@ export const defineWordEs = async (
         `3) Un ejemplo corto\n` +
         `No traduzcas al inglés.`;
 
-  const resp = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: prompt,
-  });
+  try {
+    const resp = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
 
-  return resp.text || (lang === "pt" ? "Não consegui gerar a definição." : "No pude generar la definición.");
+    return (
+      resp.text ||
+      (lang === "pt" ? "Não consegui gerar a definição." : "No pude generar la definición.")
+    );
+  } catch (error) {
+    // ✅ Si es 429, activamos cooldown
+    if (isGemini429(error)) {
+      activateGeminiCooldown();
+      return lang === "pt"
+        ? "Limite do Gemini atingido (429). Aguarde 1–2 minutos e tente novamente."
+        : "Límite de Gemini alcanzado (429). Espera 1–2 minutos e intenta de nuevo.";
+    }
+
+    console.error("Gemini defineWordEs error:", error);
+    return lang === "pt"
+      ? "Erro ao buscar definição."
+      : "Error al buscar la definición.";
+  }
 };
+
