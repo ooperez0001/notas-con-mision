@@ -2053,12 +2053,9 @@ ${termsHtml}
   setSavedWords={setSavedWords}
   storageKey="ncm_saved_words_sermon"
   variant="modal"
+    isPremium={!!user?.isPremium}
+
 />
-
-
-
-
-
 
             {/* DERECHA: Volver / Guardar */}
             <div className="flex justify-end gap-3">

@@ -4,6 +4,7 @@ import type { Language } from "../types";
 import { defineWordEs } from "../services/geminiService";
 import { getLocalYMD } from "../services/dateUtils";
 
+
 type SavedWord = {
   term: string;
   definition: string;
@@ -27,6 +28,9 @@ type SmartDictionaryProps = {
   storageKey?: string;
   variant?: "modal" | "bar";
   mode?: "sermon" | "study"; // ✅ NUEVO
+  isPremium?: boolean;
+onOpenPremium?: () => void;
+
 };
 
 export default function SmartDictionary({
@@ -36,7 +40,10 @@ export default function SmartDictionary({
   storageKey: storageKeyProp,
   variant = "modal",
   mode = "sermon", // ✅ NUEVO
+    isPremium,
+  onOpenPremium,
 }: SmartDictionaryProps) {
+
   const dict = (translations as any)[language] ?? (translations as any).es;
   const t = (key: string) =>
     dict?.[key] ?? (translations as any).es?.[key] ?? key;
@@ -69,6 +76,9 @@ export default function SmartDictionary({
   const cacheRef = useRef<Map<string, { results: any; ts: number }>>(new Map());
   const lastGeminiCallRef = useRef(0);
   const GEMINI_COOLDOWN_MS = 2000; // 2 segundos
+  const geminiBlockedUntilRef = useRef<number>(0);
+const lastSearchKeyRef = useRef<string>("");
+const lastSearchAtRef = useRef<number>(0);
 
   // (Opcional) TTL del cache: 24h
   const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -123,12 +133,11 @@ export default function SmartDictionary({
   }, [savedWords, storageKey]);
 
   useEffect(() => {
-  const hasDefs = !!dictResults?.definitions?.length;
-  if (!dictLoading && hasDefs) {
-    setIsDictOpen(true);
-  }
-}, [dictLoading, dictResults]);
-    
+    const hasDefs = !!dictResults?.definitions?.length;
+    if (!dictLoading && hasDefs) {
+      setIsDictOpen(true);
+    }
+  }, [dictLoading, dictResults]);
 
   const cleanHtmlToText = (html: string) => {
     try {
@@ -147,6 +156,8 @@ export default function SmartDictionary({
     const url = `https://api.dictionaryapi.dev/api/v2/entries/${lang}/${encodeURIComponent(
       term
     )}`;
+    console.log("[DICTAPI] GET", url);
+
     const res = await fetch(url, { signal });
     if (!res.ok) return null;
     const data = await res.json();
@@ -172,13 +183,99 @@ export default function SmartDictionary({
     const j = await r.json();
     return j?.query?.search?.[0]?.title ?? null;
   };
+  const fetchFromDictionaryApilang = async (
+  lang: "en" | "es" | "pt",
+  w: string,
+  signal: AbortSignal
+): Promise<any[] | null> => {
+  try {
+    const url1 = `https://api.dictionaryapi.dev/api/v2/entries/${lang}/${encodeURIComponent(w)}`;
+    console.log("[DICTAPI] GET", url1);
 
-  const handleSearchDictionary = async () => {
+    const res1 = await fetch(url1, { signal });
+
+    if (res1.ok) {
+      return (await res1.json()) as any[];
+    }
+
+    // ✅ Solo reintenta (2do GET) si fue 404 y la palabra cambia al quitar acentos
+    if (res1.status === 404) {
+      const w2 = w.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (w2 && w2 !== w) {
+        const url2 = `https://api.dictionaryapi.dev/api/v2/entries/${lang}/${encodeURIComponent(w2)}`;
+        console.log("[DICTAPI] GET (no-accents)", url2);
+
+        const res2 = await fetch(url2, { signal });
+        if (res2.ok) {
+          return (await res2.json()) as any[];
+        }
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+  const fetchWiktionaryMw = async (
+    w: string,
+    signal: AbortSignal
+  ): Promise<any | null> => {
+    try {
+      const url =
+        "https://en.wiktionary.org/w/api.php" +
+        `?action=query&format=json&prop=extracts&explaintext=1&redirects=1&titles=${encodeURIComponent(
+          w
+        )}&origin=*`;
+
+      const res = await fetch(url, { signal });
+      if (!res.ok) return null;
+
+      const json = await res.json();
+      const pages = json?.query?.pages;
+      if (!pages) return null;
+
+      const firstKey = Object.keys(pages)[0];
+      const page = pages[firstKey];
+      if (!page || page.missing) return null;
+
+      return page; // trae extract (texto plano)
+    } catch {
+      return null;
+    }
+  };
+
+  const handleSearchDictionary = async (opts?: { allowGemini?: boolean }) => {
+    const allowGemini = opts?.allowGemini ?? false;
+// 🔒 Bloqueo IA si no es Premium
+if (opts?.allowGemini && !isPremium) {
+  setDictError("La búsqueda con IA es una función Premium.");
+  onOpenPremium?.();
+  return;
+}
+
     const raw = (dictQuery || "").trim();
     if (!raw) return;
 
     // ✅ Normalizar
     const word = raw.replace(/\s+/g, " ").trim();
+    const wordNoAccents = word.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+// 🔒 Anti doble-disparo (Enter + click / StrictMode)
+const searchKey = `${language}|${word.toLowerCase()}|${opts?.allowGemini ? "ai" : "free"}`;
+
+const now = Date.now();
+
+if (
+  lastSearchKeyRef.current === searchKey &&
+  now - lastSearchAtRef.current < 400
+) {
+  return;
+}
+
+lastSearchKeyRef.current = searchKey;
+lastSearchAtRef.current = now;
+console.log("[DICT] search fired:", { word, language, allowGemini: !!opts?.allowGemini, t: Date.now() });
     const cacheKey = `${language}:${word.toLowerCase()}`;
 
     // ✅ Cache hit
@@ -201,14 +298,85 @@ export default function SmartDictionary({
     setDictError(null);
     setDictResults(null);
 
+    // helper para rate-limit Gemini (ya lo tienes)
+    const canCallGemini = () => {
+      const now = Date.now();
+      if (now - lastGeminiCallRef.current < GEMINI_COOLDOWN_MS) return false;
+      lastGeminiCallRef.current = now;
+      return true;
+    };
+
+    const doGeminiFallback = async () => {
+      const now = Date.now();
+
+      // ✅ bloqueo duro si ya está en 429 reciente
+      if (now < geminiBlockedUntilRef.current) {
+        const secs = Math.ceil((geminiBlockedUntilRef.current - now) / 1000);
+        setDictError(`IA temporalmente limitada. Intenta en ${secs}s.`);
+        return;
+      }
+
+      const langStr = String(language);
+      const gemLang: "es" | "pt" = langStr === "pt" ? "pt" : "es";
+
+      if (!canCallGemini()) {
+        setDictError("Espera un momento y vuelve a intentar.");
+        return;
+      }
+
+      try {
+        const text = await defineWordEs(word, gemLang);
+const lower = String(text || "").toLowerCase();
+
+// ✅ Si defineWordEs devolvió mensaje de cooldown/limite, NO lo guardes como definición
+if (
+  lower.includes("429") ||
+  lower.includes("límite") ||
+  lower.includes("limite") ||
+  lower.includes("espera") ||
+  lower.includes("aguarde") ||
+  lower.includes("pause") ||
+  lower.includes("pausa")
+) {
+  // (extra) bloquea un ratito también aquí para que el usuario no spamee
+  geminiBlockedUntilRef.current = Date.now() + 2 * 60 * 1000; // 2 min
+  setDictError(String(text));
+  return;
+}
+
+
+        const geminiResults = {
+          source: "gemini" as const,
+          lang: gemLang,
+          word,
+          definitions: [text],
+        };
+
+        setDictResults(geminiResults);
+        openModalIfNeeded(geminiResults);
+        cacheRef.current.set(cacheKey, {
+          results: geminiResults,
+          ts: Date.now(),
+        });
+        return;
+      } catch (e: any) {
+        const msg = String(e?.message || "");
+
+        // ✅ si es 429, bloquea 10 minutos
+        if (msg.includes("429")) {
+          geminiBlockedUntilRef.current = Date.now() + 10 * 60 * 1000;
+        }
+
+        setDictError("Límite de IA alcanzado. Intenta más tarde.");
+        return;
+      }
+    };
+
     try {
       // =========================
-      // 1) NO-EN: Wiktionary primero, Gemini fallback
+      // 1) NO-EN: Wiktionary -> Gemini y salir
       // =========================
       if (language !== "en") {
-    
-
-        // A) Wiktionary
         let wdata = await fetchWiktionary(word, controller.signal);
         if (requestIdRef.current !== myReqId) return;
 
@@ -226,6 +394,7 @@ export default function SmartDictionary({
         }
 
         if (wdata) {
+          // 👇 usa tu misma lógica extractDefs + langsToTry
           const langNameMap: Record<"en" | "es" | "pt", string> = {
             en: "English",
             es: "Spanish",
@@ -288,37 +457,198 @@ export default function SmartDictionary({
 
             setDictResults(results);
             openModalIfNeeded(results);
+            cacheRef.current.set(cacheKey, { results, ts: Date.now() });
+            return; // ✅ salir aquí
+          }
+        }
+        // ✅ Fallback gratis ES/PT antes de Gemini (dictionaryapi.dev)
+        const langStr = String(language);
+        const dictLang: "es" | "pt" = langStr === "pt" ? "pt" : "es";
 
+let dapi = await fetchFromDictionaryApilang(dictLang, word, controller.signal);
+
+if (!dapi && wordNoAccents !== word) {
+  dapi = await fetchFromDictionaryApilang(dictLang, wordNoAccents, controller.signal);
+}
+
+
+
+        if (requestIdRef.current !== myReqId) return;
+
+        if (dapi?.length) {
+          const meanings: any[] = dapi?.[0]?.meanings ?? [];
+          const defs: string[] = [];
+
+          for (const m of meanings) {
+            const part = m?.partOfSpeech ? `${m.partOfSpeech}: ` : "";
+            const d0 = m?.definitions?.[0]?.definition;
+            if (d0) defs.push(part + d0);
+          }
+
+          if (defs.length) {
+            const results = {
+              source: "dictionaryapi" as const,
+              lang: dictLang,
+              word,
+              definitions: defs,
+            };
+
+            setDictResults(results);
+            openModalIfNeeded(results);
             cacheRef.current.set(cacheKey, { results, ts: Date.now() });
             return;
           }
         }
+        // ✅ Segundo fallback gratis: Wiktionary (MediaWiki extract)
+        let page = await fetchWiktionaryMw(word, controller.signal);
+        if (!page && wordNoAccents !== word) {
+          page = await fetchWiktionaryMw(wordNoAccents, controller.signal);
+        }
 
-        // B) Fallback Gemini (si Wiktionary no dio nada)
-        const now = Date.now();
-        if (now - lastGeminiCallRef.current < GEMINI_COOLDOWN_MS) {
-  setDictError("Espera 2 segundos y vuelve a intentar.");
-  return;
+        if (requestIdRef.current !== myReqId) return;
+
+       const extract = String(page?.extract || "");
+if (extract) {
+  const langStr = String(language);
+  const want = langStr === "pt" ? "Portuguese" : "Spanish";
+
+  const rawLines = extract
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  // 1) Buscar sección del idioma (== Spanish ==)
+  const startIdx = rawLines.findIndex((l) => l === `== ${want} ==`);
+
+  // ✅ Si no existe esa sección, NO usamos todo el extract (evita basura)
+  if (startIdx >= 0) {
+    // 2) Tomar desde el idioma
+    const afterLang = rawLines.slice(startIdx + 1);
+
+    // 3) Cortar cuando empiece otro idioma del mismo nivel (== Something ==)
+    const nextLangIdx = afterLang.findIndex((l) => /^==\s+[^=]+?\s+==$/.test(l));
+    const langBlock = nextLangIdx >= 0 ? afterLang.slice(0, nextLangIdx) : afterLang;
+
+    // 4) Cortar al entrar a secciones basura
+    const bannedStarts = [
+      "=== Pronunciation ===",
+      "=== Etymology ===",
+      "=== Etymology 1 ===",
+      "=== Etymology 2 ===",
+      "=== References ===",
+      "=== Further reading ===",
+    ];
+
+    const cleaned: string[] = [];
+    for (const line of langBlock) {
+      if (bannedStarts.includes(line)) break;
+      if (/^===/.test(line)) continue; // saltar encabezados 3er nivel
+      if (/^=/.test(line)) continue;   // saltar encabezados
+      if (/^IPA/.test(line)) continue;
+      if (/^Rhymes:/.test(line)) continue;
+      if (/^Hyphenation:/.test(line)) continue;
+      if (/^Syllabification:/.test(line)) continue;
+      if (/^Audio/.test(line)) continue;
+
+      cleaned.push(line);
+    }
+
+    const defs = cleaned
+  .filter((l) => !l.toLowerCase().includes("obsolete"))
+  .filter((l) => !l.toLowerCase().includes("alternative"))
+  .filter((l) => !l.toLowerCase().includes("variante"))
+  .slice(0, 4);
+
+
+    if (defs.length) {
+      const results = {
+        source: "wiktionary" as const,
+        lang: langStr === "pt" ? ("pt" as const) : ("es" as const),
+        word,
+        definitions: defs,
+      };
+
+      setDictResults(results);
+      openModalIfNeeded(results);
+      cacheRef.current.set(cacheKey, { results, ts: Date.now() });
+      return;
+    }
+  }
+}
+// 🔁 Fallback gratuito: Wiktionary EN si ES/PT no dio nada útil
+if (langStr === "es" || langStr === "pt") {
+
+  const enCacheKey = `wiktionary:en:${word.toLowerCase()}`;
+
+  const cachedEn = cacheRef.current.get(enCacheKey);
+  if (cachedEn) {
+    setDictResults(cachedEn.results);
+    openModalIfNeeded(cachedEn.results);
+    return;
+  }
+
+  try {
+    const enData = await fetchWiktionary(word);
+
+
+    if (enData?.definitions?.length) {
+      const enResults = {
+       source: "wiktionary" as const,
+lang: "en" as const,
+
+        word,
+        definitions: enData.definitions.slice(0, 4),
+      };
+
+      setDictResults(enResults);
+      openModalIfNeeded(enResults);
+      cacheRef.current.set(enCacheKey, { results: enResults, ts: Date.now() });
+      return;
+    }
+  } catch {
+    // silencioso
+  }
+}
+// ✅ Fallback gratuito: Wiktionary EN si ES/PT no dio nada útil
+if (langStr === "es" || langStr === "pt") {
+  const enCacheKey = `wiktionary:en:${word.toLowerCase()}`;
+
+  const cachedEn = cacheRef.current.get(enCacheKey);
+  if (cachedEn) {
+    setDictResults(cachedEn.results);
+    openModalIfNeeded(cachedEn.results);
+    return;
+  }
+
+  try {
+    // OJO: fetchWiktionary recibe (word, signal?)
+    const enData = await fetchWiktionary(word, controller.signal);
+
+    if (enData?.definitions?.length) {
+      const enResults = {
+        source: "wiktionary" as const,
+        lang: "en" as const,
+        word,
+        definitions: enData.definitions.slice(0, 4),
+      };
+
+      setDictResults(enResults);
+      openModalIfNeeded(enResults);
+      cacheRef.current.set(enCacheKey, { results: enResults, ts: Date.now() });
+      return;
+    }
+  } catch {
+    // silencioso: si falla EN, seguimos al flujo normal (Gemini si allowGemini)
+  }
 }
 
-        lastGeminiCallRef.current = now;
 
-        const gemLang: "es" | "pt" = language === "pt" ? "pt" : "es";
+        if (!allowGemini) {
+          setDictError("No encontrado. Pulsa la lupa para intentar con IA.");
+          return;
+        }
 
-const text = await defineWordEs(word, gemLang);
-
-const results = {
-  source: "gemini" as const,
-  lang: gemLang,
-  word,
-  definitions: [text],
-};
-
-
-        setDictResults(results);
-        openModalIfNeeded(results);
-
-        cacheRef.current.set(cacheKey, { results, ts: Date.now() });
+        await doGeminiFallback();
         return;
       }
 
@@ -446,10 +776,18 @@ const results = {
       }
 
       if (!finalLang || !finalDefs.length) {
-        setDictError("Palabra no encontrada");
-        return;
-      }
+  // ✅ Nunca llamar IA si no es manual (Enter)
+  if (!allowGemini) {
+    setDictError("No encontrado. Pulsa la lupa para intentar con IA.");
+    return;
+  }
 
+  await doGeminiFallback(); // usa el mismo flujo y bloqueo 429
+  return;
+}
+
+
+      // ✅ Si Wiktionary sí encontró defs, devolvemos Wiktionary
       const results = {
         source: "wiktionary" as const,
         lang: finalLang,
@@ -459,8 +797,8 @@ const results = {
 
       setDictResults(results);
       openModalIfNeeded(results);
-
       cacheRef.current.set(cacheKey, { results, ts: Date.now() });
+      return;
     } catch (err: any) {
       if (err?.name === "AbortError") return;
 
@@ -469,7 +807,9 @@ const results = {
         msg.includes("429") ||
         msg.toLowerCase().includes("too many requests")
       ) {
-        setDictError("Gemini está limitado (429). Intenta en 20–30 segundos.");
+        setDictError(
+          "No encontré definición en fuentes gratuitas. Gemini está en pausa (429). Intenta en 1–2 minutos o prueba en inglés."
+        );
       } else {
         setDictError("Error buscando la palabra. Revisa tu conexión.");
       }
@@ -481,30 +821,30 @@ const results = {
   };
 
   // ✅ Auto-search con debounce (solo en modo study)
-  useEffect(() => {
-    // ✅ Solo auto-search en study cuando el idioma es inglés (usa APIs gratuitas)
-    if (mode !== "study") return;
-    if (language !== "en") return; // ✅ evita spam a Gemini
+useEffect(() => {
+  if (mode !== "study") return;
 
-    const q = dictQuery.trim();
+  // ✅ IMPORTANTÍSIMO: solo auto-search en inglés
+  if (language !== "en") return;
 
-    if (!q) {
-      setDictResults(null);
-      setDictError(null);
-      setDictLoading(false);
-      abortRef.current?.abort();
-      return;
-    }
+  const q = dictQuery.trim();
+  if (!q) {
+    setDictResults(null);
+    setDictError(null);
+    setDictLoading(false);
+    abortRef.current?.abort?.();
+    return;
+  }
 
-    if (q.length < 2) return;
+  if (q.length < 2) return;
 
-    const id = window.setTimeout(() => {
-      if (!dictLoading) handleSearchDictionary();
-    }, 450);
+  const id = window.setTimeout(() => {
+    if (!dictLoading) handleSearchDictionary({ allowGemini: false });
+  }, 450);
 
-    return () => window.clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dictQuery, mode, language]);
+  return () => window.clearTimeout(id);
+}, [dictQuery, mode, language]);
+
 
   function handleSaveWord() {
     if (!dictResults?.definitions?.length) return;
@@ -560,36 +900,37 @@ const results = {
 
       {/* Buscador */}
       <div className="mt-3 flex gap-2">
-       <input
-  value={dictQuery}
-  onChange={(e) => setDictQuery(e.target.value)}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (dictLoading) return;
-      if (!dictQuery.trim()) return;
+        <input
+          value={dictQuery}
+          onChange={(e) => setDictQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (dictLoading) return;
+              if (!dictQuery.trim()) return;
 
-      void handleSearchDictionary(); // ✅ Enter hace lo mismo que 🔍
-    }
-  }}
-  placeholder="Ej: Gracia, Expiación..."
-  className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-blue-200"
-/>
+              void handleSearchDictionary(); // ✅ Enter hace lo mismo que 🔍
+            }
+          }}
+          placeholder="Ej: Gracia, Expiación..."
+          className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-blue-200"
+        />
 
-<button
-  type="button"
-  onClick={() => {
-    if (dictLoading) return;
-    if (!dictQuery.trim()) return;
+        <button
+          type="button"
+          onClick={() => {
+            if (dictLoading) return;
+            if (!dictQuery.trim()) return;
+console.log("[DICT] lupa click", { variant, mode, storageKey, isPremium });
 
-    void handleSearchDictionary(); // ✅ Igual que Enter
-  }}
-  className="h-12 w-12 rounded-xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700"
-  title="Buscar"
->
-  🔍
-</button>
+            void handleSearchDictionary({ allowGemini: true }); // ✅ Click = manual (puede usar IA)
 
+          }}
+          className="h-12 w-12 rounded-xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700"
+          title="Buscar"
+        >
+          🔍
+        </button>
       </div>
 
       {/* Error */}
@@ -660,22 +1001,22 @@ const results = {
                     className="text-red-500 hover:text-red-700"
                     title="Eliminar"
                   >
-                     <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="w-5 h-5"
-                      >
-                        <path d="M3 6h18" />
-                        <path d="M8 6V4h8v2" />
-                        <path d="M6 6l1 16h10l1-16" />
-                        <path d="M10 11v6" />
-                        <path d="M14 11v6" />
-                      </svg>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-5 h-5"
+                    >
+                      <path d="M3 6h18" />
+                      <path d="M8 6V4h8v2" />
+                      <path d="M6 6l1 16h10l1-16" />
+                      <path d="M10 11v6" />
+                      <path d="M14 11v6" />
+                    </svg>
                   </button>
                 </div>
 
@@ -700,35 +1041,38 @@ const results = {
           </div>
 
           <div className="mt-3 flex items-center gap-3">
-         <input
-  value={dictQuery}
-  onChange={(e) => setDictQuery(e.target.value)}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (dictLoading) return;
-      if (!dictQuery.trim()) return;
+            <input
+              value={dictQuery}
+              onChange={(e) => setDictQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (dictLoading) return;
+                  if (!dictQuery.trim()) return;
 
-      void handleSearchDictionary(); // ✅ Enter hace lo mismo que 🔍
-    }
-  }}
-  placeholder="Ej: Gracia, Expiación..."
-  className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-blue-200"
-/>
+                  void handleSearchDictionary(); // ✅ Enter NO usa IA
 
-<button
-  type="button"
-  onClick={() => {
-    if (dictLoading) return;
-    if (!dictQuery.trim()) return;
 
-    void handleSearchDictionary(); // ✅ Igual que Enter
-  }}
-  className="h-12 w-12 rounded-xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700"
-  title="Buscar"
->
-  🔍
-</button>
+                }
+              }}
+              placeholder="Ej: Gracia, Expiación..."
+              className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-blue-200"
+            />
+
+            <button
+              type="button"
+              onClick={() => {
+                if (dictLoading) return;
+                if (!dictQuery.trim()) return;
+
+                void handleSearchDictionary({ allowGemini: true }); // ✅ Click = manual con IA
+
+              }}
+              className="h-12 w-12 rounded-xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700"
+              title="Buscar"
+            >
+              🔍
+            </button>
 
             {/* Estado debajo del buscador (solo bar) */}
             {dictLoading && (

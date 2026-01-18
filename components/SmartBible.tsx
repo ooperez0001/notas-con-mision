@@ -1029,11 +1029,11 @@ title={t["delete"] ?? "Eliminar"}
   storageKey="ncm_saved_words_smartbible"
   variant="bar"
   mode="sermon"
+    isPremium={!!user?.isPremium}
+  onOpenPremium={onOpenPremium}
+      
 
 />
-
-
-
 
           
           <div>

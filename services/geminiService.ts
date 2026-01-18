@@ -101,6 +101,23 @@ function isGemini429(error: unknown) {
   const msg = String((error as any)?.message ?? error ?? "");
   return msg.includes("429") || msg.toLowerCase().includes("too many requests");
 }
+// --- Cooldown por término (anti-reintento por palabra) ---
+const termCooldownMap = new Map<string, number>();
+const TERM_COOLDOWN_MS = 120_000; // 2 min (ajustable)
+
+function termKey(term: string, lang: "es" | "pt") {
+  return `${lang}::${term.trim().toLowerCase()}`;
+}
+
+function getTermCooldownRemainingMs(term: string, lang: "es" | "pt") {
+  const until = termCooldownMap.get(termKey(term, lang)) || 0;
+  const remaining = until - Date.now();
+  return remaining > 0 ? remaining : 0;
+}
+
+function activateTermCooldown(term: string, lang: "es" | "pt", ms = TERM_COOLDOWN_MS) {
+  termCooldownMap.set(termKey(term, lang), Date.now() + ms);
+}
 
 export const defineWordEs = async (
   term: string,
@@ -108,6 +125,15 @@ export const defineWordEs = async (
 ): Promise<string> => {
   const clean = term.trim();
   if (!clean) return lang === "pt" ? "Escreva uma palavra." : "Escribe una palabra.";
+  // ✅ Cooldown por término: no reintentar la misma palabra
+const termRemaining = getTermCooldownRemainingMs(clean, lang);
+if (termRemaining > 0) {
+  const seconds = Math.ceil(termRemaining / 1000);
+  return lang === "pt"
+    ? `Essa palavra está em pausa (${seconds}s). Tente outra ou espere.`
+    : `Esa palabra está en pausa (${seconds}s). Prueba otra o espera.`;
+}
+
 
   // ✅ Si hay cooldown, NO llamamos a Gemini
   const remaining = getGeminiCooldownRemainingMs();
@@ -147,6 +173,8 @@ export const defineWordEs = async (
     // ✅ Si es 429, activamos cooldown
     if (isGemini429(error)) {
       activateGeminiCooldown();
+      activateTermCooldown(clean, lang);
+
       return lang === "pt"
         ? "Limite do Gemini atingido (429). Aguarde 1–2 minutos e tente novamente."
         : "Límite de Gemini alcanzado (429). Espera 1–2 minutos e intenta de nuevo.";
