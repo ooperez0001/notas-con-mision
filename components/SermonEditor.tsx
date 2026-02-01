@@ -8,7 +8,7 @@ import {
   Language,
 } from "../types";
 import { Modal } from "./Modal";
-import SmartDictionary from './SmartDictionary';
+import SmartDictionary from "./SmartDictionary";
 
 import {
   fetchVerseFromAPI,
@@ -58,7 +58,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
   onOpenPremium,
   language,
   preferredVersion,
-}) => { 
+}) => {
   const [editedSermon, setEditedSermon] = useState<Sermon>(sermon);
   const [verseQuery, setVerseQuery] = useState("");
   const [verseResults, setVerseResults] = useState<BibleSearchResult | null>(
@@ -124,10 +124,6 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
       definitions?: Array<{ definition?: string }>;
     }>;
   };
-
- 
-
-  
 
   const [savedWords, setSavedWords] = useState<SavedWord[]>([]);
 
@@ -509,8 +505,10 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
     return makeDictEntry(term, defs);
   }
 
-async function fetchFromDictionaryApi(lang: string, term: string) {
-  const url = `https://api.dictionaryapi.dev/api/v2/entries/${lang}/${encodeURIComponent(term)}`;
+  async function fetchFromDictionaryApi(lang: string, term: string) {
+    const url = `https://api.dictionaryapi.dev/api/v2/entries/${lang}/${encodeURIComponent(
+      term
+    )}`;
     const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
@@ -2047,15 +2045,14 @@ ${termsHtml}
           <div className="mt-6 flex justify-between items-end gap-4">
             {/* IZQUIERDA: Diccionario + chips */}
             {/* IZQUIERDA: Diccionario unificado */}
-<SmartDictionary
-  language={language}
-  savedWords={savedWords}
-  setSavedWords={setSavedWords}
-  storageKey="ncm_saved_words_sermon"
-  variant="modal"
-    isPremium={!!user?.isPremium}
-
-/>
+            <SmartDictionary
+              language={language}
+              savedWords={savedWords}
+              setSavedWords={setSavedWords}
+              storageKey="ncm_saved_words_sermon"
+              variant="modal"
+              isPremium={!!user?.isPremium}
+            />
 
             {/* DERECHA: Volver / Guardar */}
             <div className="flex justify-end gap-3">
@@ -2076,8 +2073,6 @@ ${termsHtml}
               </button>
             </div>
           </div>
-
-         
         </div>
       </div>
     </div>

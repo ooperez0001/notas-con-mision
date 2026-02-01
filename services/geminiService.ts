@@ -9,17 +9,18 @@ if (!apiKey) {
 
 const ai = new GoogleGenAI({ apiKey });
 
-
-
-export const generateDevotional = async (verseText: string, verseRef: string): Promise<string> => {
+export const generateDevotional = async (
+  verseText: string,
+  verseRef: string
+): Promise<string> => {
   try {
     const prompt = `Escribe un devocional corto y profundo para el día de hoy, basado en el versículo: "${verseText}" (${verseRef}). Enfócate en la aplicación práctica y espiritual.`;
-    
+
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
-    
+
     return response.text || "No se pudo generar el devocional.";
   } catch (error) {
     console.error("Error generating devotional:", error);
@@ -30,12 +31,12 @@ export const generateDevotional = async (verseText: string, verseRef: string): P
 export const generateDefinition = async (term: string): Promise<string> => {
   try {
     const prompt = `Define la palabra bíblica "${term}" con un enfoque teológico y etimológico si es relevante. Sé conciso pero profundo.`;
-    
+
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
-    
+
     return response.text || "No se pudo encontrar la definición.";
   } catch (error) {
     console.error("Error generating definition:", error);
@@ -43,19 +44,26 @@ export const generateDefinition = async (term: string): Promise<string> => {
   }
 };
 
-export const analyzePassage = async (type: 'exegesis' | 'application' | 'related' | 'prayer', context: string): Promise<string> => {
+export const analyzePassage = async (
+  type: "exegesis" | "application" | "related" | "prayer",
+  context: string
+): Promise<string> => {
   try {
     let prompt = "";
-    if (type === 'exegesis') prompt = `Realiza una exégesis concisa del pasaje ${context}. Explica el contexto histórico y el significado original.`;
-    if (type === 'application') prompt = `Basado en una correcta hermenéutica, ¿cómo podemos aplicar el pasaje ${context} hoy en día de manera práctica? Dame 3 puntos clave.`;
-    if (type === 'related') prompt = `Sugiere 3 a 5 versículos o pasajes relacionados con el tema principal de ${context}, explicando brevemente la conexión teológica.`;
-    if (type === 'prayer') prompt = `Escribe una oración personal, profunda y reverente, inspirada en las verdades del pasaje ${context}.`;
+    if (type === "exegesis")
+      prompt = `Realiza una exégesis concisa del pasaje ${context}. Explica el contexto histórico y el significado original.`;
+    if (type === "application")
+      prompt = `Basado en una correcta hermenéutica, ¿cómo podemos aplicar el pasaje ${context} hoy en día de manera práctica? Dame 3 puntos clave.`;
+    if (type === "related")
+      prompt = `Sugiere 3 a 5 versículos o pasajes relacionados con el tema principal de ${context}, explicando brevemente la conexión teológica.`;
+    if (type === "prayer")
+      prompt = `Escribe una oración personal, profunda y reverente, inspirada en las verdades del pasaje ${context}.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
-    
+
     return response.text || "No se pudo generar el análisis.";
   } catch (error) {
     console.error("Error analyzing passage:", error);
@@ -63,7 +71,11 @@ export const analyzePassage = async (type: 'exegesis' | 'application' | 'related
   }
 };
 
-export const summarizeSermon = async (title: string, notes: string, verses: string): Promise<string> => {
+export const summarizeSermon = async (
+  title: string,
+  notes: string,
+  verses: string
+): Promise<string> => {
   try {
     const prompt = `Actúa como un editor experto en homilética. Resume el siguiente bosquejo de sermón en 3 puntos principales claros y una frase de conclusión impactante.
     
@@ -72,10 +84,10 @@ export const summarizeSermon = async (title: string, notes: string, verses: stri
     Notas: ${notes}`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
-    
+
     return response.text || "No se pudo generar el resumen.";
   } catch (error) {
     console.error("Error summarizing sermon:", error);
@@ -96,7 +108,6 @@ function activateGeminiCooldown(ms = GEMINI_COOLDOWN_MS) {
   geminiCooldownUntil = Math.max(geminiCooldownUntil, Date.now() + ms);
 }
 
-
 function isGemini429(error: unknown) {
   const msg = String((error as any)?.message ?? error ?? "");
   return msg.includes("429") || msg.toLowerCase().includes("too many requests");
@@ -115,7 +126,11 @@ function getTermCooldownRemainingMs(term: string, lang: "es" | "pt") {
   return remaining > 0 ? remaining : 0;
 }
 
-function activateTermCooldown(term: string, lang: "es" | "pt", ms = TERM_COOLDOWN_MS) {
+function activateTermCooldown(
+  term: string,
+  lang: "es" | "pt",
+  ms = TERM_COOLDOWN_MS
+) {
   termCooldownMap.set(termKey(term, lang), Date.now() + ms);
 }
 
@@ -124,16 +139,16 @@ export const defineWordEs = async (
   lang: "es" | "pt" = "es"
 ): Promise<string> => {
   const clean = term.trim();
-  if (!clean) return lang === "pt" ? "Escreva uma palavra." : "Escribe una palabra.";
+  if (!clean)
+    return lang === "pt" ? "Escreva uma palavra." : "Escribe una palabra.";
   // ✅ Cooldown por término: no reintentar la misma palabra
-const termRemaining = getTermCooldownRemainingMs(clean, lang);
-if (termRemaining > 0) {
-  const seconds = Math.ceil(termRemaining / 1000);
-  return lang === "pt"
-    ? `Essa palavra está em pausa (${seconds}s). Tente outra ou espere.`
-    : `Esa palabra está en pausa (${seconds}s). Prueba otra o espera.`;
-}
-
+  const termRemaining = getTermCooldownRemainingMs(clean, lang);
+  if (termRemaining > 0) {
+    const seconds = Math.ceil(termRemaining / 1000);
+    return lang === "pt"
+      ? `Essa palavra está em pausa (${seconds}s). Tente outra ou espere.`
+      : `Esa palabra está en pausa (${seconds}s). Prueba otra o espera.`;
+  }
 
   // ✅ Si hay cooldown, NO llamamos a Gemini
   const remaining = getGeminiCooldownRemainingMs();
@@ -167,7 +182,9 @@ if (termRemaining > 0) {
 
     return (
       resp.text ||
-      (lang === "pt" ? "Não consegui gerar a definição." : "No pude generar la definición.")
+      (lang === "pt"
+        ? "Não consegui gerar a definição."
+        : "No pude generar la definición.")
     );
   } catch (error) {
     // ✅ Si es 429, activamos cooldown
@@ -186,4 +203,3 @@ if (termRemaining > 0) {
       : "Error al buscar la definición.";
   }
 };
-
