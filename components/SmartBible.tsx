@@ -20,17 +20,33 @@ import { BibleDictionary } from "./BibleDictionary";
 import { translations } from "../services/translations";
 import SmartDictionary from "./SmartDictionary";
 
+
+type SendToSermonPayload = {
+  passages: any[];
+  ai: {
+    exegesis?: string;
+    application?: string;
+    related?: string;
+    prayer?: string;
+  };
+};
+
 interface SmartBibleProps {
   user?: UserProfile;
   onOpenPremium?: () => void;
   language: Language;
+
+  onSendToSermon?: (payload: SendToSermonPayload) => void;
 }
+
 
 export const SmartBible: React.FC<SmartBibleProps> = ({
   user,
   onOpenPremium,
   language,
+  onSendToSermon,
 }) => {
+
   const [query, setQuery] = useState("");
   const [selectedVersion, setSelectedVersion] = useState<string>(() => {
     const list = getVersionsByLanguage(language);
@@ -108,13 +124,13 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
   const [studyWords, setStudyWords] = useState<SavedWord[]>([]);
 
   const activePassage = activePassageKey
-    ? selectedPassages.find((p) => getPassageKey(p) === activePassageKey) ??
-      null
+    ? (selectedPassages.find((p) => getPassageKey(p) === activePassageKey) ??
+      null)
     : null;
 
   const performSearch = async (
     searchTerm: string,
-    versionOverride?: string
+    versionOverride?: string,
   ) => {
     if (!searchTerm) return;
 
@@ -133,7 +149,7 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
       setVerseData(referenceData);
     } else {
       const keywordData = await searchByKeyword(
-        searchTerm /* luego ajustamos para versión */
+        searchTerm /* luego ajustamos para versión */,
       );
       setKeywordResults(keywordData);
     }
@@ -141,54 +157,56 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
     setLoading(false);
   };
 
- const handleAITabClick = async (tab: string) => {
-  // 0) Debe existir un versículo activo
-  if (!activePassage) {
-    // opcional: aquí puedes mostrar un toast o mensaje
-    console.warn("[AI] No active passage to analyze");
-    return;
-  }
-
-  // 1) Premium gate
-  if (user && !user.isPremium && onOpenPremium) {
-    onOpenPremium();
-    return;
-  }
-
-  // 2) Abrir/cerrar acordeón
-  const isOpening = !openAIAccordions[tab];
-  setOpenAIAccordions((prev) => ({ ...prev, [tab]: isOpening }));
-
-  // 3) Cache key por versículo activo + tab
-  const cacheKey = `${activePassageKey}::${tab}`;
-
-  // 4) Si está abriendo y no hay contenido, generamos
-  if (isOpening && !aiContent[cacheKey]) {
-    // evita doble disparo si ya está cargando esto mismo
-    if (loadingAITab === cacheKey) return;
-
-    setLoadingAITab(cacheKey);
-
-    // ✅ Contexto real: referencia + versión + texto (lo más importante)
-    const context = `${activePassage.reference} (${activePassage.version})\n${activePassage.text}`;
-
-    // Si tu analyzePassage usa el idioma, puedes anexarlo aquí también:
-    // const context = `[lang=${language}]\n${activePassage.reference} (${activePassage.version})\n${activePassage.text}`;
-
-    try {
-      // @ts-ignore
-      const result = await analyzePassage(tab, context);
-
-      setAiContent((prev) => ({ ...prev, [cacheKey]: result }));
-    } catch (err) {
-      console.error("[AI] analyzePassage error", err);
-      setAiContent((prev) => ({ ...prev, [cacheKey]: "Error generando el análisis." }));
-    } finally {
-      setLoadingAITab(null);
+  const handleAITabClick = async (tab: string) => {
+    // 0) Debe existir un versículo activo
+    if (!activePassage) {
+      // opcional: aquí puedes mostrar un toast o mensaje
+      console.warn("[AI] No active passage to analyze");
+      return;
     }
-  }
-};
 
+    // 1) Premium gate
+    if (user && !user.isPremium && onOpenPremium) {
+      onOpenPremium();
+      return;
+    }
+
+    // 2) Abrir/cerrar acordeón
+    const isOpening = !openAIAccordions[tab];
+    setOpenAIAccordions((prev) => ({ ...prev, [tab]: isOpening }));
+
+    // 3) Cache key por versículo activo + tab
+    const cacheKey = `${activePassageKey}::${tab}`;
+
+    // 4) Si está abriendo y no hay contenido, generamos
+    if (isOpening && !aiContent[cacheKey]) {
+      // evita doble disparo si ya está cargando esto mismo
+      if (loadingAITab === cacheKey) return;
+
+      setLoadingAITab(cacheKey);
+
+      // ✅ Contexto real: referencia + versión + texto (lo más importante)
+      const context = `${activePassage.reference} (${activePassage.version})\n${activePassage.text}`;
+
+      // Si tu analyzePassage usa el idioma, puedes anexarlo aquí también:
+      // const context = `[lang=${language}]\n${activePassage.reference} (${activePassage.version})\n${activePassage.text}`;
+
+      try {
+        // @ts-ignore
+        const result = await analyzePassage(tab, context);
+
+        setAiContent((prev) => ({ ...prev, [cacheKey]: result }));
+      } catch (err) {
+        console.error("[AI] analyzePassage error", err);
+        setAiContent((prev) => ({
+          ...prev,
+          [cacheKey]: "Error generando el análisis.",
+        }));
+      } finally {
+        setLoadingAITab(null);
+      }
+    }
+  };
 
   const renderAccordionTitle = (title: string) => {
     if (user?.isPremium) return title;
@@ -248,14 +266,14 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
         const arr = Array.isArray(versesForVersion)
           ? versesForVersion
           : Array.isArray(versesForVersion?.verses)
-          ? versesForVersion.verses
-          : Array.isArray(versesForVersion?.data?.verses)
-          ? versesForVersion.data.verses
-          : [];
+            ? versesForVersion.verses
+            : Array.isArray(versesForVersion?.data?.verses)
+              ? versesForVersion.data.verses
+              : [];
 
         const requestedNum = Number(value.split(":")[1]);
         const match = arr.find(
-          (x: any) => Number(x?.number ?? x?.verse) === requestedNum
+          (x: any) => Number(x?.number ?? x?.verse) === requestedNum,
         );
         const first = match || arr[0] || {};
 
@@ -276,7 +294,7 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
           const exists = prev.some(
             (p) =>
               (p.ref || p.reference) === value &&
-              (p.version || p.translation) === versionToUse
+              (p.version || p.translation) === versionToUse,
           );
           return exists ? prev : [...prev, item];
         });
@@ -314,7 +332,7 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
       chapterSuggestions.find(
         (s: any) =>
           (s.version || selectedVersion || "RVR60") ===
-          (selectedVersion || "RVR60")
+          (selectedVersion || "RVR60"),
       ) || chapterSuggestions[0];
 
     // 3) Armamos el texto completo del capítulo desde los versículos que ya se muestran
@@ -334,7 +352,7 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
       const exists = prev.some(
         (p: any) =>
           (p.ref || p.reference) === value &&
-          (p.version || p.translation) === versionToUse
+          (p.version || p.translation) === versionToUse,
       );
       if (exists) return prev;
 
@@ -364,7 +382,7 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
 
   // --- Utilidades para copiar versículos ---
   // Este tipo acepta cualquier forma que use tu API para el versículo
-  type AnyVerse = {
+  type AnyVerse = {onSendToSermon?
     reference?: string; // "Juan 3:16"
     ref?: string; // a veces la API usa "ref"
     version?: string;
@@ -487,8 +505,8 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
         const versesArray = Array.isArray((result as any)?.verses)
           ? (result as any).verses
           : Array.isArray((result as any)?.data?.verses)
-          ? (result as any).data.verses
-          : null;
+            ? (result as any).data.verses
+            : null;
 
         // construimos un objeto versions sí o sí
         const allowed = getVersionsByLanguage(language).map(normalizeVersion);
@@ -536,7 +554,7 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
           language === "pt" && normalizedKeys.includes("ARC")
             ? "ARC"
             : normalizeVersion(
-                getVersionsByLanguage(language)[0] || normalizedKeys[0] || ""
+                getVersionsByLanguage(language)[0] || normalizedKeys[0] || "",
               );
 
         // Si aún no hay selección válida, ponemos default
@@ -554,12 +572,12 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
 
         // ✅ versión que debe mostrar el preview (aunque no venga en versionsObj)
         const activePreviewVersion = normalizeVersion(
-          selectedVersion || selectedVersion || "RVR60"
+          selectedVersion || selectedVersion || "RVR60",
         );
 
         // ✅ versiones para los botones del preview (incluye la activa siempre)
         const previewVersions = Array.from(
-          new Set([activePreviewVersion, ...normalizedKeys])
+          new Set([activePreviewVersion, ...normalizedKeys]),
         ).filter((v) => allowedNormalized.includes(v));
 
         // IMPORTANTE: usar versionsObj (no result.versions)
@@ -655,8 +673,8 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
           a.version === selectedVersion
             ? -1
             : b.version === selectedVersion
-            ? 1
-            : 0
+              ? 1
+              : 0,
         );
 
         setVersionSuggestions(suggestions);
@@ -671,19 +689,26 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
 
   const chapterSuggestions = versionSuggestions.filter(
     (s) =>
-      (s.text && s.text.trim().length > 0) || (s.verses && s.verses.length > 0)
+      (s.text && s.text.trim().length > 0) || (s.verses && s.verses.length > 0),
   );
 
   const verseOnlySuggestions = versionSuggestions.filter(
     (s) =>
       (!s.text || s.text.trim().length === 0) &&
-      (!s.verses || s.verses.length === 0)
+      (!s.verses || s.verses.length === 0),
   );
-  const exKey = activePassageKey ? `${activePassageKey}::exegesis` : "no_active::exegesis";
-const appKey = activePassageKey ? `${activePassageKey}::application` : "no_active::application";
-const relKey = activePassageKey ? `${activePassageKey}::related` : "no_active::related";
-const prayKey = activePassageKey ? `${activePassageKey}::prayer` : "no_active::prayer";
-
+  const exKey = activePassageKey
+    ? `${activePassageKey}::exegesis`
+    : "no_active::exegesis";
+  const appKey = activePassageKey
+    ? `${activePassageKey}::application`
+    : "no_active::application";
+  const relKey = activePassageKey
+    ? `${activePassageKey}::related`
+    : "no_active::related";
+  const prayKey = activePassageKey
+    ? `${activePassageKey}::prayer`
+    : "no_active::prayer";
 
   return (
     <div className="p-6 space-y-6 animate-fade-in max-w-3xl mx-auto">
@@ -805,7 +830,7 @@ const prayKey = activePassageKey ? `${activePassageKey}::prayer` : "no_active::p
                               // arma "juan 3:5" desde "juan 3"
                               const baseRef = String(s.reference).replace(
                                 /:\d+$/,
-                                ""
+                                "",
                               );
                               const verseRef = `${baseRef}:${verseNumber}`;
 
@@ -822,7 +847,7 @@ const prayKey = activePassageKey ? `${activePassageKey}::prayer` : "no_active::p
                                 const exists = prev.some(
                                   (p: any) =>
                                     String(p?.reference ?? p).toLowerCase() ===
-                                    verseRef.toLowerCase()
+                                    verseRef.toLowerCase(),
                                 );
                                 if (exists) return prev;
 
@@ -841,13 +866,13 @@ const prayKey = activePassageKey ? `${activePassageKey}::prayer` : "no_active::p
                             }}
                             title={`Añadir ${String(s.reference).replace(
                               /:\d+$/,
-                              ""
+                              "",
                             )}:${verseNumber}`}
                           >
                             <strong>{verseNumber}.</strong> {verseText}
                           </div>
                         );
-                      }
+                      },
                     )}
                   </div>
                   {/* Chips de versiones */}
@@ -909,6 +934,27 @@ const prayKey = activePassageKey ? `${activePassageKey}::prayer` : "no_active::p
               🧹 Nuevo estudio
             </button>
           </div>
+
+          <button
+            type="button"
+            className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm hover:bg-gray-50"
+      onClick={() => {
+  const payload = {
+    passages: selectedPassages,
+    ai: {
+      exegesis: aiContent[exKey] ?? "",
+      application: aiContent[appKey] ?? "",
+      related: aiContent[relKey] ?? "",
+      prayer: aiContent[prayKey] ?? "",
+    },
+  };
+
+  onSendToSermon?.(payload);
+}}
+
+          >
+            {tt("send_to_sermon")}
+          </button>
 
           {selectedPassages.map((p, idx) => (
             <div
@@ -981,7 +1027,7 @@ const prayKey = activePassageKey ? `${activePassageKey}::prayer` : "no_active::p
                     title={t["delete"] ?? "Eliminar"}
                     onClick={() => {
                       setSelectedPassages((prev) =>
-                        prev.filter((_, i) => i !== idx)
+                        prev.filter((_, i) => i !== idx),
                       );
                     }}
                   >
@@ -1028,7 +1074,7 @@ const prayKey = activePassageKey ? `${activePassageKey}::prayer` : "no_active::p
 
             {Object.entries(verseData.versions)
               .filter(([version]) =>
-                getVersionsByLanguage(language).includes(version)
+                getVersionsByLanguage(language).includes(version),
               )
               .map(([version, verses]) => {
                 const versesList = verses as BibleVerse[];
@@ -1143,9 +1189,8 @@ const prayKey = activePassageKey ? `${activePassageKey}::prayer` : "no_active::p
           {/* @ts-ignore */}
           <AIAAccordion
             title={renderAccordionTitle(t.analysis_exegesis)}
-         content={aiContent[exKey]}
-isLoading={loadingAITab === exKey}
-
+            content={aiContent[exKey]}
+            isLoading={loadingAITab === exKey}
             isOpen={!!openAIAccordions.exegesis}
             onClick={() => handleAITabClick("exegesis")}
           />
@@ -1153,26 +1198,23 @@ isLoading={loadingAITab === exKey}
           <AIAAccordion
             title={renderAccordionTitle(t.analysis_app)}
             content={aiContent[appKey]}
-isLoading={loadingAITab === appKey}
-
+            isLoading={loadingAITab === appKey}
             isOpen={!!openAIAccordions.application}
             onClick={() => handleAITabClick("application")}
           />
           {/* @ts-ignore */}
           <AIAAccordion
             title={renderAccordionTitle(t.analysis_related)}
-           content={aiContent[relKey]}
-isLoading={loadingAITab === relKey}
-
+            content={aiContent[relKey]}
+            isLoading={loadingAITab === relKey}
             isOpen={!!openAIAccordions.related}
             onClick={() => handleAITabClick("related")}
           />
           {/* @ts-ignore */}
           <AIAAccordion
             title={renderAccordionTitle(t.analysis_prayer)}
-           content={aiContent[prayKey]}
-isLoading={loadingAITab === prayKey}
-
+            content={aiContent[prayKey]}
+            isLoading={loadingAITab === prayKey}
             isOpen={!!openAIAccordions.prayer}
             onClick={() => handleAITabClick("prayer")}
           />

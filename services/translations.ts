@@ -144,6 +144,20 @@ export const translations = {
     active: "Activo",
     makeActive: "Hacer activo",
     useForAi: "Usar este versículo para el análisis con IA",
+    send_to_sermon: "Enviar a Nuevo Sermón",
+
+notes_title_auto: "Predicación / Nota",
+active_verse: "Versículo activo",
+
+section_passages: "Pasajes",
+section_ai_analysis: "Análisis con IA",
+section_exegesis: "Exégesis y contexto",
+section_application: "Aplicación",
+section_related: "Versículos relacionados",
+section_prayer: "Oración",
+
+empty_value: "(vacío)",
+
 
     // Personal Notes
     notes_title: "Mis Notas",
@@ -327,6 +341,20 @@ export const translations = {
     active: "Active",
     makeActive: "Make active",
     useForAi: "Use this verse for AI analysis",
+    send_to_sermon: "Send to New Sermon",
+
+notes_title_auto: "Sermon / Notes",
+active_verse: "Active verse",
+
+section_passages: "Passages",
+section_ai_analysis: "AI Analysis",
+section_exegesis: "Exegesis and context",
+section_application: "Application",
+section_related: "Related verses",
+section_prayer: "Prayer",
+
+empty_value: "(empty)",
+
 
     // Personal Notes
     notes_title: "My Notes",
@@ -511,6 +539,21 @@ export const translations = {
     active: "Ativo",
     makeActive: "Tornar ativo",
     useForAi: "Usar este versículo para análise com IA",
+    send_to_sermon: "Enviar para Novo Sermão",
+
+notes_title_auto: "Pregação / Anotações",
+active_verse: "Versículo ativo",
+
+section_passages: "Passagens",
+section_ai_analysis: "Análise com IA",
+section_exegesis: "Exegese e contexto",
+section_application: "Aplicação",
+section_related: "Versículos relacionados",
+section_prayer: "Oração",
+
+empty_value: "(vazio)",
+
+    
 
     // Personal Notes
     notes_title: "Minhas Notas",

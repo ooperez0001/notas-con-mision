@@ -1,6 +1,5 @@
 {
   "name": "notas-con-mision-copia-estable-9-dic-2025",
-
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -14,7 +13,8 @@
     "lucide-react": "^0.556.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "react-markdown": "^10.1.0"
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.13.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

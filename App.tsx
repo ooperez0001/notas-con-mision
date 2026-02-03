@@ -9,6 +9,7 @@ import { LoginScreen } from './components/LoginScreen';
 import { PremiumModal } from './components/PremiumModal';
 import { TabId, Sermon, PersonalNote, UserProfile, Language } from './types';
 import { normalizeToLocalYMD } from "./services/dateUtils";
+import { SermonEditor } from "./components/SermonEditor";
 
 
 // Mock Data Definitions
@@ -82,6 +83,9 @@ const App: React.FC = () => {
  
   const [user, setUser] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('home');
+  const [isCreatingSermon, setIsCreatingSermon] = useState(false);
+const [draftFromBible, setDraftFromBible] = useState<any | null>(null);
+
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
   
   // Initialize language first to use it for mock data defaults
@@ -120,6 +124,7 @@ try {
     }
     return MOCK_DATA['es'].sermons;
   });
+const [selectedSermon, setSelectedSermon] = useState<Sermon | null>(null);
 
   const [personalNotes, setPersonalNotes] = useState<PersonalNote[]>(() => {
     if (typeof window !== 'undefined') {
@@ -140,6 +145,48 @@ try {
     if (typeof window !== 'undefined') return localStorage.getItem('preferredVersion') || 'RVR60';
     return 'RVR60';
   });
+type SendToSermonPayload = {
+  passages: any[];
+  ai?: {
+    exegesis?: string;
+    application?: string;
+    related?: string;
+    prayer?: string;
+  };
+};
+
+const openNewSermon = (payload: SendToSermonPayload) => {
+  const today = normalizeToLocalYMD(new Date()); // deja tu versión local (como ya lo tienes)
+
+  const p = payload?.passages ?? [];
+  const ai = payload?.ai ?? {};
+
+  // 🔥 Bloque IA que sí se verá en "Mis Notas"
+  const aiText = [
+    ai.exegesis ? `📌 EXÉGESIS\n${ai.exegesis}` : "",
+    ai.application ? `📌 APLICACIÓN\n${ai.application}` : "",
+    ai.related ? `📌 RELACIONADOS\n${ai.related}` : "",
+    ai.prayer ? `🙏 ORACIÓN\n${ai.prayer}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  const newSermon: Sermon = {
+    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+    title: "",
+    preacher: "",
+    date: today,
+    notes: aiText,          // ✅ aquí queda guardada la IA
+    keyPassages: p,         // ✅ aquí quedan los pasajes
+    verses: [],
+  } as any;
+
+  setSelectedSermon(newSermon);
+  setIsCreatingSermon(true);
+  setActiveTab("sermons");
+};
+
+
 
   // Persist Data
   useEffect(() => { localStorage.setItem('sermons', JSON.stringify(sermons)); }, [sermons]);
@@ -201,26 +248,48 @@ try {
           />
         )}
         
-        {activeTab === 'sermons' && (
-          <SermonsList 
-            sermons={sermons} 
-            setSermons={setSermons}
-            selectedSermon={null} // List view manages selection internally for now or passed via props if refactored
-            setSelectedSermon={() => {}} // Placeholder if handled inside
-            user={user}
-            onOpenPremium={() => setIsPremiumModalOpen(true)}
-            language={language}
-            preferredVersion={preferredVersion}
-          />
-        )}
-        
-        {activeTab === 'bible' && (
-          <SmartBible 
-            user={user} 
-            onOpenPremium={() => setIsPremiumModalOpen(true)} 
-            language={language}
-          />
-        )}
+{activeTab === "sermons" && (
+  isCreatingSermon && selectedSermon ? (
+    <SermonEditor
+      sermon={selectedSermon}
+      setSelectedSermon={(s) => {
+        setSelectedSermon(s);
+        if (s === null) setIsCreatingSermon(false);
+      }}
+      setSermons={setSermons}
+      user={user}
+      onOpenPremium={() => setIsPremiumModalOpen(true)}
+      language={language}
+      preferredVersion={preferredVersion}
+    />
+  ) : (
+    <SermonsList
+      sermons={sermons}
+      setSermons={setSermons}
+      selectedSermon={selectedSermon}
+      setSelectedSermon={(s) => {
+        setSelectedSermon(s);
+        // si te seleccionan uno desde la lista, también abre editor
+        if (s) setIsCreatingSermon(true);
+      }}
+      user={user}
+      onOpenPremium={() => setIsPremiumModalOpen(true)}
+      language={language}
+      preferredVersion={preferredVersion}
+    />
+  )
+)}
+
+
+       {activeTab === "bible" && (
+  <SmartBible
+    user={user}
+    onOpenPremium={() => setIsPremiumModalOpen(true)}
+    language={language}
+    onSendToSermon={openNewSermon}
+  />
+)}
+
         
         {activeTab === 'notes' && (
           <PersonalNotes 
