@@ -10,11 +10,7 @@ import {
 import { Modal } from "./Modal";
 import SmartDictionary from "./SmartDictionary";
 
-import {
-  fetchVerseFromAPI,
-  searchByKeyword,
-  getVersionsByLanguage,
-} from "../services/bibleService";
+import {  fetchVerseFromAPI,searchByKeyword,getVersionsByLanguage,isVersionAvailableV1} from "../services/bibleService";
 import { summarizeSermon } from "../services/geminiService";
 import { translations, getTranslation } from "../services/translations";
 
@@ -23,6 +19,7 @@ import {
   normalizeToLocalYMD,
   formatYMDForUI,
 } from "../services/dateUtils";
+
 
 interface SermonEditorProps {
   sermon: Sermon;
@@ -786,19 +783,24 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
     if (!lastChapterRef) return;
 
     // 1) Traer el capítulo en la versión seleccionada
-    const result = await fetchVerseFromAPI(
-      lastChapterRef,
-      normalizeVersion(versionKey)
-    );
+  const result = await fetchVerseFromAPI(lastChapterRef, versionKey);
+
 
     if (!result) return;
 
     const ref = (result as any)?.ref || lastChapterRef;
 
-    // 2) Normalizar versículos del resultado (tu API devuelve data.verses)
-    const verses = Array.isArray((result as any)?.data?.verses)
-      ? (result as any).data.verses
-      : [];
+   // 2) Normalizar versículos del resultado (tu BibleService devuelve result.versions[VERSION])
+const vk = normalizeVersion(versionKey);
+const versionsObj = (result as any)?.versions || {};
+const rawVerses =
+  versionsObj[vk] ||
+  versionsObj[vk.toLowerCase?.()] ||
+  versionsObj[Object.keys(versionsObj)[0]] ||
+  [];
+
+const verses = Array.isArray(rawVerses) ? rawVerses : [];
+
 
     if (!verses.length) {
       console.warn(
@@ -817,10 +819,13 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
       id: `${ref}-${versionKey}`,
       reference: ref,
       version: String(versionKey),
-      text: verses
-        .map((v: any) =>
-          `${v.number ?? ""} ${String(v.verse ?? v.text ?? "").trim()}`.trim()
-        )
+    text: verses
+  .map((v: any) => {
+    const n = v.number ?? v.verse ?? "";
+    const tx = v.text ?? v.verse ?? "";
+    return `${n ? n + ". " : ""}${String(tx).trim()}`.trim();
+  })
+
         .filter(Boolean)
         .join("\n"),
       verses,
@@ -874,10 +879,12 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
       setPassageError(null);
 
       // Usamos el MISMO helper que SmartBible
-      const referenceData: BibleSearchResult | null = await fetchVerseFromAPI(
-        ref,
-        chosenVersionNorm
-      );
+      const referenceData: BibleSearchResult | null = await fetchVerseFromAPI( ref,chosenVersionNorm);
+      console.log("[DEBUG] ref:", ref);
+console.log("[DEBUG] chosenVersion:", chosenVersionNorm);
+console.log("[DEBUG] result keys:", Object.keys(referenceData?.versions || {}));
+console.log("[DEBUG] versions object:", referenceData?.versions);
+
 
       if (!referenceData || !referenceData.versions) {
         setPassageError("No se encontró este pasaje.");
@@ -1682,14 +1689,42 @@ ${termsHtml}
                         <span className="font-medium capitalize flex items-center gap-2">
                           {s.reference}
 
-                          <span className="text-[10px] px-2 py-[1px] rounded-full border border-gray-300 text-gray-600">
-                            {String(
-                              (s as any).version ||
-                                selectedVersion ||
-                                preferredVersion ||
-                                "RVR60"
-                            ).toUpperCase()}
-                          </span>
+                        {(() => {
+  const versionKey = String(
+    (s as any).version ||
+    selectedVersion ||
+    preferredVersion ||
+    "RVR60"
+  ).toUpperCase();
+
+  const disabled = !isVersionAvailableV1(versionKey);
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => {
+        if (disabled) return;
+        loadChapterInVersion(versionKey);
+      }}
+      title={
+        disabled
+          ? "No disponible en v1 (próximamente)"
+          : "Cambiar versión"
+      }
+      className={`text-[10px] px-2 py-[1px] rounded-full border
+        ${
+          disabled
+            ? "border-gray-300 text-gray-400 opacity-40 cursor-not-allowed"
+            : "border-blue-400 text-blue-700 hover:bg-blue-100"
+        }
+      `}
+    >
+      {versionKey} {disabled ? "🔒" : ""}
+    </button>
+  );
+})()}
+
                         </span>
 
                         <div className="mt-2 space-y-1 text-xs text-gray-700">
@@ -1733,31 +1768,49 @@ ${termsHtml}
                       </div>
                     ))}
 
-                    {/* 🔘 Botones de versiones (sin texto) */}
+                   {/*
+🔘 Botones de versiones (DESACTIVADOS EN V1)
                     {versionOnlySuggestions.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-2 justify-end">
-                        {versionOnlySuggestions.map((s) => (
-                          <button
-                            key={`btn-${s.version}`}
-                            type="button"
-                            className={`px-3 py-1 rounded-full border text-xs transition
-  ${
-    selectedVersion?.toUpperCase() === String(s.version).toUpperCase()
-      ? "bg-blue-600 text-white border-blue-600"
-      : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50"
-  }`}
-                            onClick={() => {
-                              const v = normalizeVersion(String(s.version));
-                              setSelectedVersion(v);
-                              loadChapterInVersion(v);
-                            }}
-                            title={`Cambiar a ${String(s.version)}`}
-                          >
-                            {String(s.version).toUpperCase()}
-                          </button>
-                        ))}
+                       {versionOnlySuggestions.map((s) => {
+  const vUpper = String(s.version).toUpperCase();
+  const disabled = !isVersionAvailableV1(vUpper);
+  const isActive = selectedVersion?.toUpperCase() === vUpper;
+
+  return (
+    <button
+      key={`btn-${s.version}`}
+      type="button"
+      disabled={disabled}
+      className={`px-3 py-1 rounded-full border text-xs transition
+        ${
+          disabled
+            ? "bg-gray-100 text-gray-400 border-gray-300 opacity-50 cursor-not-allowed"
+            : isActive
+              ? "bg-blue-600 text-white border-blue-600"
+              : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50"
+        }`}
+      onClick={() => {
+        if (disabled) return;
+        const v = normalizeVersion(String(s.version));
+        setSelectedVersion(v);
+        loadChapterInVersion(v);
+      }}
+      title={
+        disabled
+          ? `No disponible en v1 (${vUpper})`
+          : `Cambiar a ${vUpper}`
+      }
+    >
+      {vUpper} {disabled ? "🔒" : ""}
+    </button>
+  );
+})}
                       </div>
                     )}
+                    */}
+
+
                   </div>
                 );
               })()}

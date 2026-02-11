@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
+
 import { Sparkles, Crown } from 'lucide-react';
 import { Modal } from './Modal';
 import { Sermon, TabId, UserProfile, Language } from '../types';
 import { generateDevotional } from '../services/geminiService';
-import { getVerseOfTheDay, getVersionsByLanguage } from '../services/bibleService';
+import { getVerseOfTheDay, getVersionsByLanguage, fetchVerseFromAPI } from "../services/bibleService";
+
 import { translations, getTranslation } from "../services/translations";
 import { formatYMDForUI } from "../services/dateUtils";
 
@@ -16,21 +18,51 @@ interface DashboardProps {
   user: UserProfile;
   onOpenPremium: () => void;
   language: Language;
+  setBibleOpenRef: React.Dispatch<React.SetStateAction<string>>;
+
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, latestSermon, preferredVersion, setPreferredVersion, user, onOpenPremium, language }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, latestSermon, preferredVersion, setPreferredVersion, user, onOpenPremium, language,  setBibleOpenRef,}) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalContent, setModalContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [verseOfTheDayData] = useState(getVerseOfTheDay());
+  const [verseOfTheDayData] = useState(getVerseOfTheDay()); // solo ref + flags
+const [verseText, setVerseText] = useState<string>("");
+const [verseLoading, setVerseLoading] = useState(false);
+
 const t = (key: keyof typeof translations["es"]) => getTranslation(language, key);
 
-
+{/*   
   // Get filtered versions based on current language
   const availableVersions = getVersionsByLanguage(language);
 
   // If the preferredVersion is not available in the current language, default to the first available
   const displayVersion = availableVersions.includes(preferredVersion) ? preferredVersion : availableVersions[0];
+*/}
+
+const displayVersion = "RVR60";
+useEffect(() => {
+  const run = async () => {
+    const ref = verseOfTheDayData?.refs?.[language] || verseOfTheDayData?.refs?.es;
+    if (!ref) return;
+
+    setVerseLoading(true);
+    const res = await fetchVerseFromAPI(ref, "RVR60");
+
+   const raw = res?.versions?.RVR60;
+
+const text =
+  typeof raw === "string"
+    ? raw
+    : Array.isArray(raw)
+      ? raw.map((v) => v.text).join(" ")
+      : "";
+    setVerseText(text);
+    setVerseLoading(false);
+  };
+
+  run();
+}, [language, verseOfTheDayData]);
 
   const handleShowDevotional = async () => {
     if (!user.isPremium) {
@@ -41,11 +73,14 @@ const t = (key: keyof typeof translations["es"]) => getTranslation(language, key
     setIsModalOpen(true); 
     setIsLoading(true);
     // @ts-ignore
-    const verseText = verseOfTheDayData.versions[displayVersion];
+    const verseTextForAI = verseText || "";
+
     // Pass language context to AI using the localized reference
     // @ts-ignore
-    const verseRef = verseOfTheDayData.refs[language];
-    const result = await generateDevotional(verseText, `${verseRef} ${displayVersion}`);
+    const verseRef = verseOfTheDayData?.refs?.[language] || verseOfTheDayData?.refs?.es;
+
+   const result = await generateDevotional(verseTextForAI, `${verseRef} RVR60`);
+
     setModalContent(result); 
     setIsLoading(false);
   };
@@ -117,9 +152,22 @@ const t = (key: keyof typeof translations["es"]) => getTranslation(language, key
 )}
 
 
-        <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+       <div
+  className="
+    bg-gradient-to-br from-white to-gray-50
+    dark:from-gray-800 dark:to-gray-900
+    p-6 rounded-2xl shadow-sm
+    border border-gray-200 dark:border-gray-700
+    cursor-pointer
+    transition-all
+    hover:shadow-md
+    hover:border-blue-300
+  "
+>
+
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-lg text-gray-700 dark:text-gray-200">{t("verse_of_day")}</h2>
+            {/*
             <select 
               value={displayVersion} 
               onChange={(e) => setPreferredVersion(e.target.value)} 
@@ -128,14 +176,45 @@ const t = (key: keyof typeof translations["es"]) => getTranslation(language, key
             >
               {availableVersions.map(v => <option key={v} value={v} className="dark:bg-gray-800 dark:text-white">{v}</option>)}
             </select>
+            */}
           </div>
-          {/* @ts-ignore */}
-          <p className={`text-xl leading-relaxed font-serif ${verseOfTheDayData.isJesusWords ? 'text-red-700 dark:text-red-400' : 'text-gray-800 dark:text-gray-100'}`}>
-             {/* @ts-ignore */}
-            "{verseOfTheDayData.versions[displayVersion]}"
-          </p>
-          {/* @ts-ignore */}
-          <p className="text-right text-blue-600 dark:text-blue-400 font-bold mt-4 tracking-wide">{verseOfTheDayData.refs[language]}</p>
+          
+   <div
+  role="button"
+  tabIndex={0}
+  className="cursor-pointer select-none"
+  title="Abrir Biblia Inteligente"
+ onClick={() => {
+  const ref = verseOfTheDayData?.refs?.[language] || verseOfTheDayData?.refs?.es;
+  if (ref) setBibleOpenRef(ref);
+  setActiveTab("bible");
+}}
+onKeyDown={(e) => {
+  if (e.key === "Enter" || e.key === " ") {
+    const ref = verseOfTheDayData?.refs?.[language] || verseOfTheDayData?.refs?.es;
+    if (ref) setBibleOpenRef(ref);
+    setActiveTab("bible");
+  }
+}}
+
+>
+  <p
+    className={`text-xl leading-relaxed font-serif ${
+      verseOfTheDayData?.isJesusWords
+        ? "text-red-700 dark:text-red-400"
+        : "text-gray-800 dark:text-gray-100"
+    }`}
+  >
+   {verseLoading ? "Cargando..." : (verseText || "")}
+
+  </p>
+
+  <p className="text-right text-blue-600 dark:text-blue-400 font-bold mt-4 tracking-wide">
+    {verseOfTheDayData?.refs?.[language] ?? ""}
+  </p>
+</div>
+
+
         </div>
 
         <button 

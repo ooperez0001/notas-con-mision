@@ -1,24 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 
 import { Search, Sparkles, Lock } from "lucide-react";
-import {
-  fetchVerseFromAPI,
-  searchByKeyword,
-  getVersionsByLanguage,
-} from "../services/bibleService";
+import {fetchVerseFromAPI,searchByKeyword,getVersionsByLanguage,} from "../services/bibleService";
 import { analyzePassage } from "../services/geminiService";
-import {
-  BibleSearchResult,
-  KeywordResult,
-  BibleVerse,
-  UserProfile,
-  Language,
-} from "../types";
+import {BibleSearchResult,KeywordResult,BibleVerse,UserProfile,Language,} from "../types";
 import { AIAAccordion } from "./AIAccordion";
-
 import { BibleDictionary } from "./BibleDictionary";
 import { translations } from "../services/translations";
 import SmartDictionary from "./SmartDictionary";
+
 
 
 type SendToSermonPayload = {
@@ -32,11 +22,15 @@ type SendToSermonPayload = {
 };
 
 interface SmartBibleProps {
-  user?: UserProfile;
-  onOpenPremium?: () => void;
+  user?: UserProfile | null;
+  onOpenPremium: () => void;
   language: Language;
 
   onSendToSermon?: (payload: SendToSermonPayload) => void;
+
+  // ✅ puente para abrir versículo del día en Biblia Inteligente
+  bibleOpenRef?: string;
+  setBibleOpenRef?: React.Dispatch<React.SetStateAction<string>>;
 }
 
 
@@ -45,6 +39,9 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
   onOpenPremium,
   language,
   onSendToSermon,
+  bibleOpenRef,
+setBibleOpenRef,
+
 }) => {
 
   const [query, setQuery] = useState("");
@@ -88,6 +85,21 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
 
   // Versículo activo (por defecto: el último agregado)
   const [activePassageKey, setActivePassageKey] = useState<string | null>(null);
+  
+useEffect(() => {
+  const ref = (bibleOpenRef || "").trim();
+  if (!ref) return;
+
+  // 1) ponerlo en el input
+  setQuery(ref);
+
+  // 2) mostrar caja/sugerencias y buscar
+  setShowSuggestions(true);
+  scheduleSuggestionsSearch(ref);
+
+  // 3) limpiar el puente para que no se repita
+  setBibleOpenRef?.("");
+}, [bibleOpenRef]);
 
   const getPassageKey = (p: any) => `${p.reference}|${p.version}`;
   // Si quieres incluir id:
@@ -449,6 +461,8 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
     scheduleSuggestionsSearch(v);
   };
 
+{/* V1: selector de versiones desactivado (solo RVR60 por ahora) */}
+{false && (
   <div className="mt-2 flex flex-wrap gap-2">
     {getVersionsByLanguage(language).map((v) => (
       <button
@@ -467,7 +481,10 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
         {t[`version_${v}`] ?? v}
       </button>
     ))}
-  </div>;
+  </div>
+)}
+
+
   const normalizeVersion = (v: string) => (v || "").trim().toUpperCase();
 
   const scheduleSuggestionsSearch = (value: string) => {
@@ -801,6 +818,7 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
                     <span className="font-semibold text-blue-700 dark:text-blue-400">
                       {s.reference}
                     </span>
+                    
                     <span className="text-[10px] px-2 py-0.5 rounded-full border border-gray-300 text-gray-600">
                       {(s as any).version || selectedVersion || "RVR60"}
                     </span>
@@ -875,7 +893,8 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
                       },
                     )}
                   </div>
-                  {/* Chips de versiones */}
+                  
+                  {/* Chips de versiones 
                   <div className="mt-3 flex flex-wrap gap-2">
                     {getVersionsByLanguage(language).map((version) => (
                       <button
@@ -903,6 +922,7 @@ export const SmartBible: React.FC<SmartBibleProps> = ({
                       </button>
                     ))}
                   </div>
+                  */}
                 </div>
               ))}
             </div>

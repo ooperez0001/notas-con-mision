@@ -20,6 +20,16 @@ export const normalizeText = (text: string) =>
         .replace(/[\u0300-\u036f]/g, "")
     : "";
 
+    // =======================
+// V1: versiones disponibles (solo ES por ahora)
+// =======================
+export const AVAILABLE_VERSIONS_V1 = ["RVR60", "NVI", "DHH"] as const;
+
+export const isVersionAvailableV1 = (v?: string) => {
+  const key = (v ?? "").trim().toUpperCase();
+  return (AVAILABLE_VERSIONS_V1 as readonly string[]).includes(key);
+};
+
 // --- COLECCIÓN DE VERSÍCULOS DIARIOS ---
 const DAILY_VERSES = [
   {
@@ -208,6 +218,14 @@ export const fetchVerseFromAPI = async (
   reference: string,
   uiVersion?: string
 ): Promise<BibleSearchResult | null> => {
+    const uiKey = (uiVersion ?? "RVR60").trim().toUpperCase();
+
+  // 🚫 Bloqueo v1: solo ES disponible (RVR60, NVI, DHH)
+  if (!isVersionAvailableV1(uiKey)) {
+    console.warn("[BibleService] Versión no disponible en v1:", uiKey);
+    return null;
+  }
+
   try {
     const ref = reference.trim().replace(/–/g, "-");
 
@@ -295,18 +313,17 @@ export const fetchVerseFromAPI = async (
     };
 
     // Llenamos RVR60 con lo que trae la API
-    result.versions["RVR60"] = selectedVerses.map((v) => ({
-      number: v.number,
-      text: v.verse,
-      isJesusWords: false, // la API no marca palabras de Jesús
-    }));
+   const uiKey = (uiVersion ?? "RVR60").trim().toUpperCase();
 
-    // Aseguramos que las demás versiones existan aunque estén vacías
-    bibleVersions.forEach((version) => {
-      if (!result.versions[version]) {
-        result.versions[version] = [];
-      }
-    });
+result.versions[uiKey] = selectedVerses.map((v) => ({
+  number: v.number,
+  text: v.verse,
+  isJesusWords: false,
+}));
+
+   // ✅ V1: NO agregamos versiones vacías.
+// Solo devolvemos la versión que realmente trajo texto la API.
+
 
     return result;
   } catch (error) {

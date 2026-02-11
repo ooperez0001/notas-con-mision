@@ -87,7 +87,8 @@ const App: React.FC = () => {
 const [draftFromBible, setDraftFromBible] = useState<any | null>(null);
 
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
-  
+  const [bibleOpenRef, setBibleOpenRef] = useState<string>("");
+
   // Initialize language first to use it for mock data defaults
   const [language, setLanguage] = useState<Language>(() => {
     if (typeof window !== 'undefined') {
@@ -245,6 +246,7 @@ const openNewSermon = (payload: SendToSermonPayload) => {
             user={user}
             onOpenPremium={() => setIsPremiumModalOpen(true)}
             language={language}
+            setBibleOpenRef={setBibleOpenRef} 
           />
         )}
         
@@ -279,18 +281,17 @@ const openNewSermon = (payload: SendToSermonPayload) => {
     />
   )
 )}
-
-
-       {activeTab === "bible" && (
+      {activeTab === "bible" && (
   <SmartBible
     user={user}
     onOpenPremium={() => setIsPremiumModalOpen(true)}
     language={language}
     onSendToSermon={openNewSermon}
+    bibleOpenRef={bibleOpenRef}           // ✅
+    setBibleOpenRef={setBibleOpenRef}     // ✅ (opcional pero recomendado)
   />
 )}
-
-        
+       
         {activeTab === 'notes' && (
           <PersonalNotes 
              personalNotes={personalNotes}
