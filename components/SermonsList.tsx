@@ -89,7 +89,8 @@ export const SermonsList: React.FC<SermonsListProps> = ({ sermons, setSermons, u
   });
 
  return (
-  <div className="p-6 animate-fade-in max-w-2xl mx-auto">
+ <div className="p-6 animate-fade-in w-full max-w-4xl mx-auto">
+
     <div className="flex justify-between items-center mb-6">
       <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
         {t("sermons_title")}
