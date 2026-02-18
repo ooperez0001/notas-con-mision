@@ -4,14 +4,13 @@ import { Sparkles, Crown } from "lucide-react";
 import { Modal } from "./Modal";
 import { Sermon, TabId, UserProfile, Language } from "../types";
 import { generateDevotional } from "../services/geminiService";
-import {
-  getVerseOfTheDay,
-  getVersionsByLanguage,
-  fetchVerseFromAPI,
-} from "../services/bibleService";
+import { getVerseOfTheDay, getVersionsByLanguage, fetchVerseFromAPI,} from "../services/bibleService";
 
 import { translations, getTranslation } from "../services/translations";
 import { formatYMDForUI } from "../services/dateUtils";
+import { getTodayDevotional, saveTodayDevotional,} from "../services/devotionalCache";
+
+
 
 interface DashboardProps {
   setActiveTab: (tab: TabId) => void;
@@ -79,30 +78,67 @@ export const Dashboard: React.FC<DashboardProps> = ({
     run();
   }, [language, verseOfTheDayData]);
 
-  const handleShowDevotional = async () => {
-    if (!user.isPremium) {
-      onOpenPremium();
-      return;
-    }
+const handleShowDevotional = async () => {
+  if (!user.isPremium) {
+    onOpenPremium();
+    return;
+  }
 
-    setIsModalOpen(true);
-    setIsLoading(true);
-    // @ts-ignore
-    const verseTextForAI = verseText || "";
+  setIsModalOpen(true);
+  setIsLoading(true);
 
-    // Pass language context to AI using the localized reference
-    // @ts-ignore
-    const verseRef =
-      verseOfTheDayData?.refs?.[language] || verseOfTheDayData?.refs?.es;
+  // =========================
+  // 1️⃣ Definir userKey estable
+  // =========================
+  const userKey =
+    (user as any)?.email ||
+    (user as any)?.id ||
+    "guest";
 
-    const result = await generateDevotional(
-      verseTextForAI,
-      `${verseRef} RVR60`,
-    );
+  // =========================
+  // 2️⃣ Definir idioma seguro
+  // =========================
+  type LangKey = "es" | "en" | "pt";
+  const langKey: LangKey =
+    (language === "en" || language === "pt" || language === "es")
+      ? language
+      : "es";
 
-    setModalContent(result);
+  // =========================
+  // 3️⃣ Revisar cache primero
+  // =========================
+  const cached = getTodayDevotional(userKey, langKey);
+
+  if (cached) {
+    setModalContent(cached);
     setIsLoading(false);
-  };
+    return;
+  }
+
+  // =========================
+  // 4️⃣ Generar nuevo devocional
+  // =========================
+  const verseTextForAI = verseText || "";
+
+  const verseRef =
+    verseOfTheDayData?.refs?.[langKey] ||
+    verseOfTheDayData?.refs?.es;
+
+  const result = await generateDevotional(
+    verseTextForAI,
+    `${verseRef} RVR60`
+  );
+
+  // =========================
+  // 5️⃣ Guardar en cache
+  // =========================
+  saveTodayDevotional(userKey, langKey, result);
+
+  setModalContent(result);
+  setIsLoading(false);
+};
+
+
 
   return (
     <>
